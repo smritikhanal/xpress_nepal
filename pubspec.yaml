@@ -18,3 +18,23 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # Add your assets here
+  assets:
+    - assets/images/
+    - assets/images/logo/
+    - assets/images/icons/
+    - assets/images/onboarding/
+    - assets/images/products/
+    - assets/images/categories/
+    - assets/images/banners/
+    - assets/images/empty_states/
+    - assets/animations/
+    - assets/animations/lottie/
+  
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic

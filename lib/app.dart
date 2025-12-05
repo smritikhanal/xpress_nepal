@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+import 'core/constants/app_strings.dart';
+import 'core/theme/app_theme.dart';
+import 'routes/app_routes.dart';
 
 class XpressNepalApp extends StatelessWidget {
   const XpressNepalApp({Key? key}) : super(key: key);
@@ -7,14 +9,11 @@ class XpressNepalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Xpress Nepal',
+      title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: const Color(0xFF1976D2),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: const SplashScreen(),
+      theme: AppTheme.lightTheme,
+      initialRoute: AppRoutes.splash,
+      onGenerateRoute: RouteGenerator.generateRoute,
     );
   }
 }
