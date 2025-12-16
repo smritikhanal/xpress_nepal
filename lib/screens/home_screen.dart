@@ -13,6 +13,13 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _paddingM = 16.0;
   static const double _spaceS = 8.0;
 
+  static const double _paddingL = 20.0;
+  static const double _paddingXL = 24.0;
+  static const double _spaceL = 16.0;
+  static const double _spaceXXL = 32.0;
+  static const double _radiusL = 16.0;
+  static const double _radiusXL = 24.0;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -47,7 +54,71 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(width: isTablet ? _paddingM : _spaceS),
         ],
       ),
-      body: SingleChildScrollView(),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with Search
+            Container(
+              padding: EdgeInsets.all(isTablet ? _paddingXL : _paddingL),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(_radiusXL),
+                  bottomRight: Radius.circular(_radiusXL),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hello, Welcome! 👋',
+                    style: isTablet
+                        ? Theme.of(context).textTheme.displayLarge
+                        : Theme.of(context).textTheme.displayMedium,
+                  ),
+                  const SizedBox(height: _spaceS),
+                  Text(
+                    'What would you like to order today?',
+                    style: isTablet
+                        ? Theme.of(
+                            context,
+                          ).textTheme.bodyLarge?.copyWith(color: Colors.white)
+                        : Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: _spaceL),
+
+                  // Search Bar
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search products...',
+                      filled: true,
+                      fillColor: Theme.of(context).canvasColor,
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.filter_list),
+                        onPressed: () {},
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(_radiusL),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? _paddingL : _paddingM,
+                        vertical: isTablet ? _paddingL : _paddingM,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: _spaceXXL),
+          ],
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
