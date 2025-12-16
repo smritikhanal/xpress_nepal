@@ -91,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Image.asset(
           'assets/images/logo/logo.png',
-          height: isTablet ? 40 : 32,
+          height: isTablet ? 48 : 40,
           fit: BoxFit.contain,
         ),
         bottom: PreferredSize(
@@ -129,21 +129,19 @@ class _HomeScreenState extends State<HomeScreen> {
             // Header with Search
             Container(
               padding: EdgeInsets.all(isTablet ? _paddingXL : _paddingL),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(_radiusXL),
-                  bottomRight: Radius.circular(_radiusXL),
-                ),
-              ),
+              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hello, Welcome! 👋',
+                    'Hello,',
                     style: isTablet
-                        ? Theme.of(context).textTheme.displayLarge
-                        : Theme.of(context).textTheme.displayMedium,
+                        ? Theme.of(context).textTheme.displayLarge?.copyWith(
+                            color: Colors.grey.withOpacity(0.2),
+                          )
+                        : Theme.of(context).textTheme.displayMedium?.copyWith(
+                            color: Colors.grey.withOpacity(0.2),
+                          ),
                   ),
                   const SizedBox(height: _spaceS),
                   Text(
