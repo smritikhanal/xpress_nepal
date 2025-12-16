@@ -89,11 +89,18 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
-        title: Text(
-          'Xpress Nepal',
-          style: Theme.of(
-            context,
-          ).textTheme.displayMedium?.copyWith(fontSize: isTablet ? 24 : 20),
+        title: Image.asset(
+          'assets/images/logo/logo.png',
+          height: isTablet ? 40 : 32,
+          fit: BoxFit.contain,
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Divider(
+            height: 1.0,
+            thickness: 1.0,
+            color: Colors.grey.withOpacity(0.2),
+          ),
         ),
         actions: [
           IconButton(
