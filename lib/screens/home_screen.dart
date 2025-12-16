@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Colors.white,
         elevation: 0,
         title: Image.asset(
           'assets/images/logo/logo.png',
@@ -104,11 +104,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_outlined, size: isTablet ? 32 : 24),
+            icon: Icon(
+              Icons.notifications_outlined,
+              size: isTablet ? 32 : 24,
+              color: Theme.of(context).primaryColor,
+            ),
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.shopping_cart_outlined, size: isTablet ? 32 : 24),
+            icon: Icon(
+              Icons.shopping_cart_outlined,
+              size: isTablet ? 32 : 24,
+              color: Theme.of(context).primaryColor,
+            ),
             onPressed: () {},
           ),
           SizedBox(width: isTablet ? _paddingM : _spaceS),
