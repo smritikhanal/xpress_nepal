@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:xpress_nepal/data/services/auth_service.dart';
+import 'package:xpress_nepal/screens/home_screen.dart';
 import 'package:xpress_nepal/screens/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -40,15 +42,22 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
-    _navigateToOnboarding();
+    _navigateToNextScreen();
   }
 
-  _navigateToOnboarding() async {
+  _navigateToNextScreen() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
+      // Check if user is logged in
+      final authService = AuthService();
+      final isLoggedIn = authService.isLoggedIn();
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        MaterialPageRoute(
+          builder: (context) =>
+              isLoggedIn ? const HomeScreen() : const OnboardingScreen(),
+        ),
       );
     }
   }
