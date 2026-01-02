@@ -207,39 +207,20 @@ class _RegisterScreenState extends State<RegisterScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Logo with gradient container
+                        // Logo
                         Center(
-                          child: Container(
-                            width: isTablet ? 90 : 75,
-                            height: isTablet ? 90 : 75,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: AppColors.secondaryGradient,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.secondary.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                  blurRadius: 25,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/logo/logo.png',
-                                width: isTablet ? 90 : 75,
-                                height: isTablet ? 90 : 75,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.person_add_rounded,
-                                    size: 38,
-                                    color: AppColors.textLight,
-                                  );
-                                },
-                              ),
-                            ),
+                          child: Image.asset(
+                            'assets/images/logo/logo.png',
+                            width: isTablet ? 100 : 85,
+                            height: isTablet ? 100 : 85,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.person_add_rounded,
+                                size: isTablet ? 50 : 42,
+                                color: AppColors.secondary,
+                              );
+                            },
                           ),
                         ),
                         SizedBox(height: isTablet ? 24 : 20),
