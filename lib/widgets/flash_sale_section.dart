@@ -143,7 +143,7 @@ class _FlashSaleSectionState extends State<FlashSaleSection> {
   }) {
     final soldPercent = (product['sold'] / product['total'] * 100).round();
     final cardWidth = isTablet ? 200.0 : 160.0;
-    final imageHeight = isTablet ? 130.0 : 110.0;
+    final imageHeight = isTablet ? 120.0 : 100.0;
 
     return Container(
       width: cardWidth,
@@ -155,6 +155,7 @@ class _FlashSaleSectionState extends State<FlashSaleSection> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Product Image with discount badge
           Stack(
@@ -175,7 +176,7 @@ class _FlashSaleSectionState extends State<FlashSaleSection> {
                       color: AppColors.surfaceLight,
                       child: Icon(
                         Icons.shopping_bag_outlined,
-                        size: 50,
+                        size: isTablet ? 50 : 40,
                         color: AppColors.primary.withValues(alpha: 0.5),
                       ),
                     );
@@ -196,9 +197,9 @@ class _FlashSaleSectionState extends State<FlashSaleSection> {
                   ),
                   child: Text(
                     '-${product['discount']}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: isTablet ? 12 : 11,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -207,70 +208,78 @@ class _FlashSaleSectionState extends State<FlashSaleSection> {
             ],
           ),
           // Product Details
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product['name'],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(isTablet ? 12 : 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    product['name'],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: isTablet ? 14 : 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      'Rs ${product['salePrice']}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Rs ${product['originalPrice']}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textHint,
-                        decoration: TextDecoration.lineThrough,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Progress bar
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: product['sold'] / product['total'],
-                        backgroundColor: AppColors.surfaceLight,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.primary,
+                  const SizedBox(height: 4),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Rs ${product['salePrice']}',
+                        style: TextStyle(
+                          fontSize: isTablet ? 15 : 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
                         ),
-                        minHeight: 6,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$soldPercent% sold',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Rs ${product['originalPrice']}',
+                        style: TextStyle(
+                          fontSize: isTablet ? 12 : 11,
+                          color: AppColors.textHint,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Progress bar
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: product['sold'] / product['total'],
+                          backgroundColor: AppColors.surfaceLight,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                          minHeight: isTablet ? 6 : 5,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '$soldPercent% sold',
+                        style: TextStyle(
+                          fontSize: isTablet ? 11 : 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
