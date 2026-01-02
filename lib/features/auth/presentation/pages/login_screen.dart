@@ -168,39 +168,20 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Logo with gradient container
+                        // Logo
                         Center(
-                          child: Container(
-                            width: isTablet ? 110 : 90,
-                            height: isTablet ? 110 : 90,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: AppColors.primaryGradient,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                  blurRadius: 25,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/logo/logo.png',
-                                width: isTablet ? 110 : 90,
-                                height: isTablet ? 110 : 90,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.local_shipping_rounded,
-                                    size: 45,
-                                    color: AppColors.textLight,
-                                  );
-                                },
-                              ),
-                            ),
+                          child: Image.asset(
+                            'assets/images/logo/logo.png',
+                            width: isTablet ? 120 : 100,
+                            height: isTablet ? 120 : 100,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.local_shipping_rounded,
+                                size: isTablet ? 60 : 50,
+                                color: AppColors.primary,
+                              );
+                            },
                           ),
                         ),
                         SizedBox(height: isTablet ? 32 : 24),
