@@ -30,91 +30,98 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           child: Row(
             children: [
-              // Logo and title
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.textLight.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
+              // Logo
+              Container(
+                height: isTablet ? 45 : 40,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Image.asset(
+                  'assets/images/logo/logo.png',
+                  height: isTablet ? 37 : 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
                       Icons.local_shipping_rounded,
-                      color: AppColors.textLight,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Xpress Nepal',
-                    style: TextStyle(
-                      color: AppColors.textLight,
-                      fontWeight: FontWeight.w800,
-                      fontSize: isTablet ? 22 : 18,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ],
+                      color: AppColors.primary,
+                      size: isTablet ? 28 : 24,
+                    );
+                  },
+                ),
               ),
-              SizedBox(width: isTablet ? 24 : 12),
+              if (isTablet) ...[
+                const SizedBox(width: 24),
 
-              // Search bar
-              Expanded(
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.textLight,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    controller: searchController,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: AppColors.textPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Search products...',
-                      hintStyle: const TextStyle(
-                        color: AppColors.textHint,
-                        fontSize: 14,
-                      ),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(left: 12, right: 8),
-                        child: Icon(
-                          Icons.search_rounded,
-                          size: 22,
-                          color: AppColors.textHint,
+                // Search bar - only on tablet
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.textLight,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: searchController,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textPrimary,
                       ),
-                      prefixIconConstraints: const BoxConstraints(
-                        minWidth: 46,
-                        minHeight: 44,
+                      decoration: InputDecoration(
+                        hintText: 'Search products...',
+                        hintStyle: const TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 14,
+                        ),
+                        filled: true,
+                        fillColor: Colors.transparent,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.only(left: 12, right: 8),
+                          child: Icon(
+                            Icons.search_rounded,
+                            size: 22,
+                            color: AppColors.textHint,
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 46,
+                          minHeight: 44,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ] else ...[
+                const Spacer(),
+              ],
 
               const SizedBox(width: 8),
+
+              // Search icon for mobile only
+              if (!isTablet)
+                _buildActionButton(
+                  icon: Icons.search_rounded,
+                  onPressed: () {
+                    // TODO: Open search screen or show search dialog
+                  },
+                  isTablet: isTablet,
+                ),
 
               // Action buttons
               _buildActionButton(
