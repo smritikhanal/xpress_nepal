@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xpress_nepal/data/services/auth_service.dart';
 import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/custom_text_field.dart';
 import 'package:xpress_nepal/screens/home_screen.dart';
@@ -18,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _authService = AuthService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -103,18 +105,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isLoading = true;
       });
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      // Register with AuthService
+      final result = await _authService.signUp(
+        name: _nameController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        if (result.success) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Registration failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -129,9 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(
-              isTablet ? _paddingXXL * 2 : _paddingXL,
-            ),
+            padding: EdgeInsets.all(isTablet ? _paddingXXL * 2 : _paddingXL),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: isTablet ? 600 : double.infinity,
@@ -147,9 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       width: isTablet ? 100 : 80,
                       height: isTablet ? 100 : 80,
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceL : _spaceM,
-                    ),
+                    SizedBox(height: isTablet ? _spaceL : _spaceM),
 
                     // Title
                     Text(
@@ -170,9 +182,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceXL : _spaceL,
-                    ),
+                    SizedBox(height: isTablet ? _spaceXL : _spaceL),
 
                     // User Type Selection
                     Text(
@@ -189,9 +199,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Expanded(
                           child: InkWell(
                             onTap: () => setState(() => _userType = 'customer'),
-                            borderRadius: BorderRadius.circular(
-                              _radiusM,
-                            ),
+                            borderRadius: BorderRadius.circular(_radiusM),
                             child: Container(
                               padding: const EdgeInsets.all(_paddingM),
                               decoration: BoxDecoration(
@@ -201,9 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       : _border,
                                   width: 2,
                                 ),
-                                borderRadius: BorderRadius.circular(
-                                  _radiusM,
-                                ),
+                                borderRadius: BorderRadius.circular(_radiusM),
                               ),
                               child: Row(
                                 children: [
@@ -232,9 +238,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Expanded(
                           child: InkWell(
                             onTap: () => setState(() => _userType = 'seller'),
-                            borderRadius: BorderRadius.circular(
-                              _radiusM,
-                            ),
+                            borderRadius: BorderRadius.circular(_radiusM),
                             child: Container(
                               padding: const EdgeInsets.all(_paddingM),
                               decoration: BoxDecoration(
@@ -244,9 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       : _border,
                                   width: 2,
                                 ),
-                                borderRadius: BorderRadius.circular(
-                                  _radiusM,
-                                ),
+                                borderRadius: BorderRadius.circular(_radiusM),
                               ),
                               child: Row(
                                 children: [
@@ -354,22 +356,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         },
                       ),
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceXL : _spaceL,
-                    ),
+                    SizedBox(height: isTablet ? _spaceXL : _spaceL),
 
                     // Register Button
                     CustomButton(
                       text: 'Sign Up',
                       onPressed: _handleRegister,
                       isLoading: _isLoading,
-                      height: isTablet
-                          ? _buttonHeightL
-                          : _buttonHeightM,
+                      height: isTablet ? _buttonHeightL : _buttonHeightM,
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceL : _spaceM,
-                    ),
+                    SizedBox(height: isTablet ? _spaceL : _spaceM),
 
                     // Login Link
                     Row(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xpress_nepal/data/services/auth_service.dart';
 import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/custom_text_field.dart';
 import 'package:xpress_nepal/screens/home_screen.dart';
@@ -15,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -64,18 +66,31 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = true;
       });
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      // Authenticate with AuthService
+      final result = await _authService.login(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
 
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        if (result.success) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Login failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -90,9 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(
-              isTablet ? _paddingXXL * 2 : _paddingXL,
-            ),
+            padding: EdgeInsets.all(isTablet ? _paddingXXL * 2 : _paddingXL),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: isTablet ? 600 : double.infinity,
@@ -108,9 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: isTablet ? 120 : 100,
                       height: isTablet ? 120 : 100,
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceXL : _spaceL,
-                    ),
+                    SizedBox(height: isTablet ? _spaceXL : _spaceL),
 
                     // Welcome Text
                     Text(
@@ -131,9 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceXXL : _spaceXL,
-                    ),
+                    SizedBox(height: isTablet ? _spaceXXL : _spaceXL),
 
                     // Email Field
                     CustomTextField(
@@ -184,22 +193,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceL : _spaceM,
-                    ),
+                    SizedBox(height: isTablet ? _spaceL : _spaceM),
 
                     // Login Button
                     CustomButton(
                       text: 'Login',
                       onPressed: _handleLogin,
                       isLoading: _isLoading,
-                      height: isTablet
-                          ? _buttonHeightL
-                          : _buttonHeightM,
+                      height: isTablet ? _buttonHeightL : _buttonHeightM,
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceXL : _spaceL,
-                    ),
+                    SizedBox(height: isTablet ? _spaceXL : _spaceL),
 
                     // Divider with OR
                     Row(
@@ -220,9 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Expanded(child: Divider()),
                       ],
                     ),
-                    SizedBox(
-                      height: isTablet ? _spaceXL : _spaceL,
-                    ),
+                    SizedBox(height: isTablet ? _spaceXL : _spaceL),
 
                     // Sign Up Link
                     Row(
