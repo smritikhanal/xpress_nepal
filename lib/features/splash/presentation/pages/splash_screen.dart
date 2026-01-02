@@ -147,37 +147,18 @@ class _SplashScreenState extends State<SplashScreen>
                               child: child,
                             );
                           },
-                          child: Container(
-                            width: 140,
-                            height: 140,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: AppColors.primaryGradient,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.4,
-                                  ),
-                                  blurRadius: 30,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/logo/logo.png',
-                                width: 140,
-                                height: 140,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.local_shipping_rounded,
-                                    size: 70,
-                                    color: AppColors.textLight,
-                                  );
-                                },
-                              ),
-                            ),
+                          child: Image.asset(
+                            'assets/images/logo/logo.png',
+                            width: 150,
+                            height: 150,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(
+                                Icons.local_shipping_rounded,
+                                size: 80,
+                                color: AppColors.primary,
+                              );
+                            },
                           ),
                         ),
                       ),
