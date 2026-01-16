@@ -23,4 +23,13 @@ abstract class AuthLocalDataSource {
 
   /// Check if user is logged in
   bool isLoggedIn();
+
+  /// Save authentication token
+  Future<void> saveToken(String token);
+
+  /// Get stored authentication token
+  String? getToken();
+
+  /// Clear authentication token
+  Future<void> clearToken();
 }

@@ -1,67 +1,57 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
-import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 import 'package:xpress_nepal/features/auth/domain/datasources/auth_local_datasource.dart';
+import 'package:xpress_nepal/features/auth/domain/datasources/auth_remote_datasource.dart';
 import 'package:xpress_nepal/features/auth/domain/entities/user_entity.dart';
 import 'package:xpress_nepal/features/auth/domain/repositories/auth_repository.dart';
 
 /// Implementation of AuthRepository
-/// Handles business logic for authentication operations
+/// Handles business logic for authentication operations using remote API
 class AuthRepositoryImpl implements AuthRepository {
   final AuthLocalDataSource _localDataSource;
+  final AuthRemoteDataSource _remoteDataSource;
 
-  AuthRepositoryImpl({required AuthLocalDataSource localDataSource})
-    : _localDataSource = localDataSource;
-
-  /// Hash password using SHA-256
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
-  /// Generate a unique ID for users
-  String _generateUserId() {
-    return DateTime.now().millisecondsSinceEpoch.toString();
-  }
+  AuthRepositoryImpl({
+    required AuthLocalDataSource localDataSource,
+    required AuthRemoteDataSource remoteDataSource,
+  }) : _localDataSource = localDataSource,
+       _remoteDataSource = remoteDataSource;
 
   @override
   Future<AuthResult> signUp({
     required String name,
     required String email,
     required String password,
+    String? phone,
+    String role = 'customer',
   }) async {
     try {
-      // Normalize email
-      final normalizedEmail = email.toLowerCase().trim();
+      // Call remote API to register
+      final result = await _remoteDataSource.register(
+        name: name,
+        email: email,
+        password: password,
+        phone: phone,
+        role: role,
+      );
 
-      // Check if email already exists
-      final existingUser = _localDataSource.findUserByEmail(normalizedEmail);
-      if (existingUser != null) {
-        return AuthResult.failure('An account with this email already exists');
+      if (result.success && result.user != null) {
+        // Save user to local storage for offline access
+        await _localDataSource.saveUser(result.user!);
+
+        // Save session with user ID
+        await _localDataSource.saveSession(result.user!.id);
+
+        // Save token to session
+        if (result.token != null) {
+          await _localDataSource.saveToken(result.token!);
+        }
+
+        return AuthResult.success(
+          message: result.message ?? 'Account created successfully',
+          user: result.user!.toEntity(),
+        );
       }
 
-      // Hash the password
-      final passwordHash = _hashPassword(password);
-
-      // Create new user model
-      final user = UserModel(
-        id: _generateUserId(),
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordHash: passwordHash,
-      );
-
-      // Save user to local storage
-      await _localDataSource.saveUser(user);
-
-      // Auto-login after signup
-      await _localDataSource.saveSession(user.id);
-
-      return AuthResult.success(
-        message: 'Account created successfully',
-        user: user.toEntity(),
-      );
+      return AuthResult.failure(result.message ?? 'Registration failed');
     } catch (e) {
       return AuthResult.failure(
         'An error occurred during registration: ${e.toString()}',
@@ -75,28 +65,31 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      // Normalize email
-      final normalizedEmail = email.toLowerCase().trim();
-
-      // Find user by email
-      final user = _localDataSource.findUserByEmail(normalizedEmail);
-      if (user == null) {
-        return AuthResult.failure('No account found with this email');
-      }
-
-      // Verify password
-      final passwordHash = _hashPassword(password);
-      if (user.passwordHash != passwordHash) {
-        return AuthResult.failure('Invalid password');
-      }
-
-      // Save session
-      await _localDataSource.saveSession(user.id);
-
-      return AuthResult.success(
-        message: 'Login successful',
-        user: user.toEntity(),
+      // Call remote API to login
+      final result = await _remoteDataSource.login(
+        email: email,
+        password: password,
       );
+
+      if (result.success && result.user != null) {
+        // Save/update user to local storage
+        await _localDataSource.saveUser(result.user!);
+
+        // Save session with user ID
+        await _localDataSource.saveSession(result.user!.id);
+
+        // Save token to session
+        if (result.token != null) {
+          await _localDataSource.saveToken(result.token!);
+        }
+
+        return AuthResult.success(
+          message: result.message ?? 'Login successful',
+          user: result.user!.toEntity(),
+        );
+      }
+
+      return AuthResult.failure(result.message ?? 'Login failed');
     } catch (e) {
       return AuthResult.failure(
         'An error occurred during login: ${e.toString()}',
@@ -106,7 +99,12 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
+    // Call remote logout
+    await _remoteDataSource.logout();
+
+    // Clear local session
     await _localDataSource.clearSession();
+    await _localDataSource.clearToken();
   }
 
   @override
@@ -121,5 +119,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
     final user = _localDataSource.getUserById(userId);
     return user?.toEntity();
+  }
+
+  /// Get the stored auth token
+  String? getToken() {
+    return _localDataSource.getToken();
   }
 }

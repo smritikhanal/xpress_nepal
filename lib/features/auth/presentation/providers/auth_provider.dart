@@ -1,6 +1,8 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:xpress_nepal/core/constants/hive_constants.dart';
+import 'package:xpress_nepal/core/services/api_service.dart';
 import 'package:xpress_nepal/features/auth/data/datasources/auth_local_datasource_impl.dart';
+import 'package:xpress_nepal/features/auth/data/datasources/auth_remote_datasource_impl.dart';
 import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 import 'package:xpress_nepal/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:xpress_nepal/features/auth/domain/repositories/auth_repository.dart';
@@ -13,6 +15,7 @@ class AuthProvider {
 
   late final AuthRepository _authRepository;
   late final AuthViewModel _authViewModel;
+  late final ApiService _apiService;
 
   AuthProvider._internal();
 
@@ -34,14 +37,29 @@ class AuthProvider {
         ? Hive.box(HiveConstants.sessionBox)
         : await Hive.openBox(HiveConstants.sessionBox);
 
-    // Create data source
+    // Create local data source
     final localDataSource = AuthLocalDataSourceImpl(
       usersBox: usersBox,
       sessionBox: sessionBox,
     );
 
+    // Create API service
+    _apiService = ApiService();
+
+    // Restore auth token if exists
+    final storedToken = localDataSource.getToken();
+    if (storedToken != null) {
+      _apiService.setAuthToken(storedToken);
+    }
+
+    // Create remote data source
+    final remoteDataSource = AuthRemoteDataSourceImpl(apiService: _apiService);
+
     // Create repository
-    _authRepository = AuthRepositoryImpl(localDataSource: localDataSource);
+    _authRepository = AuthRepositoryImpl(
+      localDataSource: localDataSource,
+      remoteDataSource: remoteDataSource,
+    );
 
     // Create view model
     _authViewModel = AuthViewModel(authRepository: _authRepository);
@@ -52,6 +70,9 @@ class AuthProvider {
 
   /// Get the auth view model
   AuthViewModel get authViewModel => _authViewModel;
+
+  /// Get the API service
+  ApiService get apiService => _apiService;
 
   /// Check if user is logged in
   bool get isLoggedIn => _authRepository.isLoggedIn();

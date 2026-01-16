@@ -128,6 +128,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
+        phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
+        role: _userType,
       );
 
       if (mounted) {

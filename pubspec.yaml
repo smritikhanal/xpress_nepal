@@ -17,6 +17,9 @@ dependencies:
   
   # Crypto for password hashing
   crypto: ^3.0.3
+  
+  # HTTP for API calls
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

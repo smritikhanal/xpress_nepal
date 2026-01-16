@@ -4,8 +4,16 @@ class UserEntity {
   final String id;
   final String name;
   final String email;
+  final String? phone;
+  final String role;
 
-  const UserEntity({required this.id, required this.name, required this.email});
+  const UserEntity({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.phone,
+    this.role = 'customer',
+  });
 
   @override
   bool operator ==(Object other) {
@@ -13,12 +21,20 @@ class UserEntity {
     return other is UserEntity &&
         other.id == id &&
         other.name == name &&
-        other.email == email;
+        other.email == email &&
+        other.phone == phone &&
+        other.role == role;
   }
 
   @override
-  int get hashCode => id.hashCode ^ name.hashCode ^ email.hashCode;
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      email.hashCode ^
+      phone.hashCode ^
+      role.hashCode;
 
   @override
-  String toString() => 'UserEntity(id: $id, name: $name, email: $email)';
+  String toString() =>
+      'UserEntity(id: $id, name: $name, email: $email, phone: $phone, role: $role)';
 }

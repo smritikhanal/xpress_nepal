@@ -11,6 +11,7 @@ class HiveConstants {
 
   // Session keys
   static const String currentUserIdKey = 'currentUserId';
+  static const String authTokenKey = 'authToken';
 
   // Type adapter IDs
   static const int userModelTypeId = 0;
