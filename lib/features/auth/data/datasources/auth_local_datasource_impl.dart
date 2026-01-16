@@ -52,6 +52,21 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   bool isLoggedIn() {
-    return getCurrentSessionUserId() != null;
+    return getCurrentSessionUserId() != null && getToken() != null;
+  }
+
+  @override
+  Future<void> saveToken(String token) async {
+    await _sessionBox.put(HiveConstants.authTokenKey, token);
+  }
+
+  @override
+  String? getToken() {
+    return _sessionBox.get(HiveConstants.authTokenKey);
+  }
+
+  @override
+  Future<void> clearToken() async {
+    await _sessionBox.delete(HiveConstants.authTokenKey);
   }
 }
