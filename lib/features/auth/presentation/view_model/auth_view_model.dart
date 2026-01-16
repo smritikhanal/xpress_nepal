@@ -29,11 +29,13 @@ class AuthViewModel extends ChangeNotifier {
   /// Check if user is logged in (synchronous check)
   bool get isLoggedIn => _authRepository.isLoggedIn();
 
-  /// Sign up with name, email, and password
+  /// Sign up with name, email, password, and optional phone/role
   Future<bool> signUp({
     required String name,
     required String email,
     required String password,
+    String? phone,
+    String role = 'customer',
   }) async {
     _state = AuthState.loading();
     notifyListeners();
@@ -42,6 +44,8 @@ class AuthViewModel extends ChangeNotifier {
       name: name,
       email: email,
       password: password,
+      phone: phone,
+      role: role,
     );
 
     if (result.success && result.user != null) {
