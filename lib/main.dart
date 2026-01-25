@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:xpress_nepal/core/constants/hive_constants.dart';
-import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
+import 'package:xpress_nepal/core/services/hive_service.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
+  // Initialize Hive service (handles Hive init and adapter registration)
+  final hiveService = HiveService();
+  await hiveService.init();
 
-  // Register adapters
-  if (!Hive.isAdapterRegistered(HiveConstants.userModelTypeId)) {
-    Hive.registerAdapter(UserModelAdapter());
-  }
-
-  // Initialize Auth Provider
-  await AuthProvider.instance.initialize();
+  // Initialize Auth Provider (sets up all auth dependencies)
+  final authProvider = AuthProvider.instance;
+  await authProvider.initialize();
 
   runApp(const XpressNepalApp());
 }

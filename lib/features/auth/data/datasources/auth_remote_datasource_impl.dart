@@ -3,7 +3,6 @@ import 'package:xpress_nepal/core/services/api_service.dart';
 import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 import 'package:xpress_nepal/features/auth/domain/datasources/auth_remote_datasource.dart';
 
-/// Implementation of AuthRemoteDataSource using API service
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final ApiService _apiService;
 
@@ -18,41 +17,47 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? phone,
     String role = 'customer',
   }) async {
-    final response = await _apiService.post(
-      ApiConstants.register,
-      body: {
-        'name': name.trim(),
-        'email': email.toLowerCase().trim(),
-        'password': password,
-        'phone': phone ?? '',
-        'role': role,
-      },
-    );
+    try {
+      final response = await _apiService.post(
+        ApiConstants.register,
+        body: {
+          'name': name.trim(),
+          'email': email.toLowerCase().trim(),
+          'password': password,
+          'role': role,
+          if (phone != null) 'phone': phone,
+        },
+      );
 
-    if (response.success && response.data != null) {
-      final data = response.data!;
-      final token = data['token'] as String?;
-      final userData = data['user'] as Map<String, dynamic>?;
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        final token = data['token'] as String?;
+        final userJson = data['user'] as Map<String, dynamic>?;
 
-      if (userData != null && token != null) {
-        final user = UserModel.fromJson(userData, token: token);
+        if (userJson != null && token != null) {
+          _apiService.setAuthToken(token);
 
-        // Set the auth token for future requests
-        _apiService.setAuthToken(token);
+          final user = UserModel.fromJson(userJson, token: token);
 
-        return AuthApiResult(
-          success: true,
-          message: response.message ?? 'Registration successful',
-          user: user,
-          token: token,
-        );
+          return AuthApiResult(
+            success: true,
+            message: response.message ?? 'Registration successful',
+            user: user,
+            token: token,
+          );
+        }
       }
-    }
 
-    return AuthApiResult(
-      success: false,
-      message: response.message ?? 'Registration failed',
-    );
+      return AuthApiResult(
+        success: false,
+        message: response.message ?? 'Registration failed',
+      );
+    } catch (e) {
+      return AuthApiResult(
+        success: false,
+        message: 'Registration error: ${e.toString()}',
+      );
+    }
   }
 
   @override
@@ -60,43 +65,49 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String password,
   }) async {
-    final response = await _apiService.post(
-      ApiConstants.login,
-      body: {'email': email.toLowerCase().trim(), 'password': password},
-    );
+    try {
+      final response = await _apiService.post(
+        ApiConstants.login,
+        body: {'email': email.toLowerCase().trim(), 'password': password},
+      );
 
-    if (response.success && response.data != null) {
-      final data = response.data!;
-      final token = data['token'] as String?;
-      final userData = data['user'] as Map<String, dynamic>?;
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        final token = data['token'] as String?;
+        final userJson = data['user'] as Map<String, dynamic>?;
 
-      if (userData != null && token != null) {
-        final user = UserModel.fromJson(userData, token: token);
+        if (userJson != null && token != null) {
+          _apiService.setAuthToken(token);
 
-        // Set the auth token for future requests
-        _apiService.setAuthToken(token);
+          final user = UserModel.fromJson(userJson, token: token);
 
-        return AuthApiResult(
-          success: true,
-          message: response.message ?? 'Login successful',
-          user: user,
-          token: token,
-        );
+          return AuthApiResult(
+            success: true,
+            message: response.message ?? 'Login successful',
+            user: user,
+            token: token,
+          );
+        }
       }
-    }
 
-    return AuthApiResult(
-      success: false,
-      message: response.message ?? 'Login failed',
-    );
+      return AuthApiResult(
+        success: false,
+        message: response.message ?? 'Login failed',
+      );
+    } catch (e) {
+      return AuthApiResult(
+        success: false,
+        message: 'Login error: ${e.toString()}',
+      );
+    }
   }
 
   @override
   Future<void> logout() async {
-    // Clear the auth token
-    _apiService.clearAuthToken();
-
-    // Optionally call the logout endpoint
-    await _apiService.post(ApiConstants.logout);
+    try {
+      await _apiService.post(ApiConstants.logout);
+    } finally {
+      _apiService.clearAuthToken();
+    }
   }
 }
