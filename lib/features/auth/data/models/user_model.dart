@@ -3,8 +3,7 @@ import 'package:xpress_nepal/features/auth/domain/entities/user_entity.dart';
 
 part 'user_model.g.dart';
 
-/// UserModel extends UserEntity and adds Hive serialization
-/// This model is used in the data layer for persistence
+/// UserModel for local persistence (Hive)
 @HiveType(typeId: 0)
 class UserModel extends HiveObject {
   @HiveField(0)
@@ -17,28 +16,36 @@ class UserModel extends HiveObject {
   final String email;
 
   @HiveField(3)
-  final String passwordHash;
-
-  @HiveField(4)
   final String? phone;
 
-  @HiveField(5)
+  @HiveField(4)
   final String role;
+
+  @HiveField(5)
+  final bool isActive;
 
   @HiveField(6)
   final String? token;
+
+  @HiveField(7)
+  final String? createdAt;
+
+  @HiveField(8)
+  final String? updatedAt;
 
   UserModel({
     required this.id,
     required this.name,
     required this.email,
-    required this.passwordHash,
     this.phone,
     this.role = 'customer',
+    this.isActive = true,
     this.token,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  /// Convert to domain entity
+  // ================= MODEL → ENTITY =================
   UserEntity toEntity() {
     return UserEntity(
       id: id,
@@ -46,68 +53,83 @@ class UserModel extends HiveObject {
       email: email,
       phone: phone,
       role: role,
+      isActive: isActive,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
-  /// Create from domain entity (requires password hash)
-  factory UserModel.fromEntity(UserEntity entity, String passwordHash) {
+  // ================= ENTITY → MODEL =================
+  factory UserModel.fromEntity(UserEntity entity, {String? token}) {
     return UserModel(
       id: entity.id,
       name: entity.name,
       email: entity.email,
-      passwordHash: passwordHash,
       phone: entity.phone,
       role: entity.role,
-    );
-  }
-
-  /// Create from API JSON response
-  factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
-    return UserModel(
-      id: json['id'] as String? ?? json['_id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      passwordHash: '', // Password is not returned from API
-      phone: json['phone'] as String?,
-      role: json['role'] as String? ?? 'customer',
+      isActive: entity.isActive,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       token: token,
     );
   }
 
-  /// Convert to JSON for API requests
+  // ================= JSON → MODEL =================
+  factory UserModel.fromJson(
+    Map<String, dynamic> json, {
+    String? token,
+  }) {
+    return UserModel(
+      id: json['_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      phone: json['phone'] as String?,
+      role: json['role'] as String? ?? 'customer',
+      isActive: json['isActive'] as bool? ?? true,
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
+      token: token,
+    );
+  }
+
+  // ================= MODEL → JSON =================
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'name': name,
       'email': email,
       'phone': phone,
       'role': role,
+      'isActive': isActive,
     };
   }
 
-  /// Create a copy with updated fields
+  // ================= COPY WITH =================
   UserModel copyWith({
     String? id,
     String? name,
     String? email,
-    String? passwordHash,
     String? phone,
     String? role,
+    bool? isActive,
     String? token,
+    String? createdAt,
+    String? updatedAt,
   }) {
     return UserModel(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
-      passwordHash: passwordHash ?? this.passwordHash,
       phone: phone ?? this.phone,
       role: role ?? this.role,
+      isActive: isActive ?? this.isActive,
       token: token ?? this.token,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return 'UserModel(id: $id, name: $name, email: $email, phone: $phone, role: $role)';
+    return 'UserModel(id: $id, name: $name, email: $email, role: $role, isActive: $isActive)';
   }
 }
