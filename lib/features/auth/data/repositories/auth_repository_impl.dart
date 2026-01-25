@@ -34,7 +34,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
 
       if (result.success && result.user != null) {
-        // Save user to local storage for offline access
+        // User is already a UserModel, save directly
         await _localDataSource.saveUser(result.user!);
 
         // Save session with user ID
@@ -72,7 +72,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
 
       if (result.success && result.user != null) {
-        // Save/update user to local storage
+        // User is already a UserModel, save directly
         await _localDataSource.saveUser(result.user!);
 
         // Save session with user ID

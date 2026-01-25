@@ -3,7 +3,7 @@ import 'package:xpress_nepal/core/constants/hive_constants.dart';
 import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 import 'package:xpress_nepal/features/auth/domain/datasources/auth_local_datasource.dart';
 
-/// Implementation of AuthLocalDataSource using Hive for local storage
+/// Implementation of AuthLocalDataSource for local Hive storage
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   final Box<UserModel> _usersBox;
   final Box<dynamic> _sessionBox;
@@ -23,7 +23,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   UserModel? findUserByEmail(String email) {
     try {
       return _usersBox.values.firstWhere(
-        (user) => user.email == email.toLowerCase().trim(),
+        (user) => user.email.toLowerCase() == email.toLowerCase().trim(),
       );
     } catch (e) {
       return null;
@@ -42,7 +42,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   String? getCurrentSessionUserId() {
-    return _sessionBox.get(HiveConstants.currentUserIdKey);
+    return _sessionBox.get(HiveConstants.currentUserIdKey) as String?;
   }
 
   @override
@@ -52,7 +52,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   bool isLoggedIn() {
-    return getCurrentSessionUserId() != null && getToken() != null;
+    final userId = _sessionBox.get(HiveConstants.currentUserIdKey);
+    return userId != null;
   }
 
   @override
@@ -62,7 +63,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   String? getToken() {
-    return _sessionBox.get(HiveConstants.authTokenKey);
+    return _sessionBox.get(HiveConstants.authTokenKey) as String?;
   }
 
   @override
