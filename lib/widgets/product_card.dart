@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'product_grid.dart';
 
+/// Legacy ProductCard - use ProductCardFromSample or ProductCardFromEntity instead
 class ProductCard extends StatelessWidget {
-  final Product product;
+  final SampleProduct product;
 
   const ProductCard({super.key, required this.product});
 
