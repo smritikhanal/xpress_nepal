@@ -72,6 +72,21 @@ class ApiClient {
       options: options,
     );
   }
+
+  // DELETE request
+  Future<Response> delete(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    return _dio.delete(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+    );
+  }
 }
 
 class _AuthInterceptor extends Interceptor {
