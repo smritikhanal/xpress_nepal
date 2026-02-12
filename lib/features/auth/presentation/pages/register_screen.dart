@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/custom_text_field.dart';
 import 'package:xpress_nepal/features/home/presentation/pages/home_screen.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/login_screen.dart';
+import 'package:xpress_nepal/features/seller/presentation/pages/seller_dashboard_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -21,6 +22,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _shopNameController = TextEditingController();
+  final _businessDescriptionController = TextEditingController();
   final _authViewModel = AuthProvider.instance.authViewModel;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -64,8 +67,22 @@ class _RegisterScreenState extends State<RegisterScreen>
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _shopNameController.dispose();
+    _businessDescriptionController.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  String? _validateShopName(String? value) {
+    if (_userType == 'seller') {
+      if (value == null || value.trim().isEmpty) {
+        return 'Please enter your shop name';
+      }
+      if (value.length < 2) {
+        return 'Shop name must be at least 2 characters';
+      }
+    }
+    return null;
   }
 
   String? _validateName(String? value) {
@@ -130,6 +147,12 @@ class _RegisterScreenState extends State<RegisterScreen>
         password: _passwordController.text,
         phone: _phoneController.text.isNotEmpty ? _phoneController.text : null,
         role: _userType,
+        shopName: _userType == 'seller' ? _shopNameController.text : null,
+        businessDescription:
+            _userType == 'seller' &&
+                _businessDescriptionController.text.isNotEmpty
+            ? _businessDescriptionController.text
+            : null,
       );
 
       if (mounted) {
@@ -142,7 +165,9 @@ class _RegisterScreenState extends State<RegisterScreen>
             context,
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
-                  const HomeScreen(),
+                  _userType == 'seller'
+                  ? const SellerDashboardScreen()
+                  : const HomeScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                     return FadeTransition(opacity: animation, child: child);
@@ -347,6 +372,36 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 ),
                                 const SizedBox(height: 14),
 
+                                // Seller-specific fields
+                                if (_userType == 'seller') ...[
+                                  // Shop Name (required)
+                                  CustomTextField(
+                                    controller: _shopNameController,
+                                    hintText: 'My Awesome Shop',
+                                    labelText: 'Shop Name *',
+                                    validator: _validateShopName,
+                                    prefixIcon: const Icon(
+                                      Icons.store_rounded,
+                                      color: AppColors.textHint,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  // Business Description (optional)
+                                  CustomTextField(
+                                    controller: _businessDescriptionController,
+                                    hintText: 'Describe what you sell...',
+                                    labelText:
+                                        'Business Description (Optional)',
+                                    validator: (_) => null,
+                                    maxLines: 2,
+                                    prefixIcon: const Icon(
+                                      Icons.info_outline_rounded,
+                                      color: AppColors.textHint,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                ],
+
                                 // Password Field
                                 CustomTextField(
                                   controller: _passwordController,
@@ -423,8 +478,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         SizedBox(height: isTablet ? 28 : 20),
 
                         // Login Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               'Already have an account? ',

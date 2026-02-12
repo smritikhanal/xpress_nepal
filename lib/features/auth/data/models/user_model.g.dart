@@ -17,22 +17,24 @@ class UserModelAdapter extends TypeAdapter<UserModel> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return UserModel(
-      id: fields[0] as String? ?? '',
-      name: fields[1] as String? ?? '',
-      email: fields[2] as String? ?? '',
+      id: fields[0] as String,
+      name: fields[1] as String,
+      email: fields[2] as String,
       phone: fields[3] as String?,
-      role: fields[4] as String? ?? 'customer',
-      isActive: fields[5] as bool? ?? true,
+      role: fields[4] as String,
+      isActive: fields[5] as bool,
       token: fields[6] as String?,
       createdAt: fields[7] as String?,
       updatedAt: fields[8] as String?,
+      shopName: fields[9] as String?,
+      businessDescription: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserModel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +52,11 @@ class UserModelAdapter extends TypeAdapter<UserModel> {
       ..writeByte(7)
       ..write(obj.createdAt)
       ..writeByte(8)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(9)
+      ..write(obj.shopName)
+      ..writeByte(10)
+      ..write(obj.businessDescription);
   }
 
   @override

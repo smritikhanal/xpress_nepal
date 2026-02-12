@@ -7,6 +7,8 @@ class UserEntity {
   final String? phone;
   final String role;
   final bool isActive;
+  final String? shopName;
+  final String? businessDescription;
   final String? createdAt;
   final String? updatedAt;
 
@@ -17,6 +19,8 @@ class UserEntity {
     this.phone,
     this.role = 'customer',
     this.isActive = true,
+    this.shopName,
+    this.businessDescription,
     this.createdAt,
     this.updatedAt,
   });
@@ -32,6 +36,8 @@ class UserEntity {
         other.phone == phone &&
         other.role == role &&
         other.isActive == isActive &&
+        other.shopName == shopName &&
+        other.businessDescription == businessDescription &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -44,6 +50,8 @@ class UserEntity {
         phone.hashCode ^
         role.hashCode ^
         isActive.hashCode ^
+        shopName.hashCode ^
+        businessDescription.hashCode ^
         createdAt.hashCode ^
         updatedAt.hashCode;
   }

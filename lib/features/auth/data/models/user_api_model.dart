@@ -28,7 +28,8 @@ class UserApiModel {
   // ================= JSON → MODEL =================
   factory UserApiModel.fromJson(Map<String, dynamic> json) {
     return UserApiModel(
-      id: json['_id'] as String?,
+      // Backend auth response uses 'id', MongoDB queries use '_id'
+      id: (json['id'] ?? json['_id']) as String?,
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,

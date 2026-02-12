@@ -20,6 +20,8 @@ abstract class AuthRemoteDataSource {
     required String password,
     String? phone,
     String role,
+    String? shopName,
+    String? businessDescription,
   });
 
   /// Login user via API
