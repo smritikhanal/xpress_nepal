@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/custom_text_field.dart';
 import 'package:xpress_nepal/features/home/presentation/pages/home_screen.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/register_screen.dart';
+import 'package:xpress_nepal/features/seller/presentation/pages/seller_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -97,11 +98,14 @@ class _LoginScreenState extends State<LoginScreen>
         });
 
         if (success) {
+          final user = _authViewModel.state.user;
+          final isSeller = user?.role == 'seller';
+
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
-                  const HomeScreen(),
+                  isSeller ? const SellerDashboardScreen() : const HomeScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
                     return FadeTransition(opacity: animation, child: child);
@@ -368,8 +372,9 @@ class _LoginScreenState extends State<LoginScreen>
                         SizedBox(height: isTablet ? 32 : 24),
 
                         // Sign Up Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               "Don't have an account? ",

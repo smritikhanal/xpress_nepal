@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:xpress_nepal/core/constants/hive_constants.dart';
 import 'package:xpress_nepal/core/services/api_service.dart';
@@ -25,6 +27,12 @@ class AuthProvider {
     return _instance!;
   }
 
+  /// Set mock instance for testing
+  @visibleForTesting
+  static set instance(AuthProvider? mock) {
+    _instance = mock;
+  }
+
   /// Initialize the provider with Hive boxes
   /// Must be called after Hive is initialized
   Future<void> initialize() async {
@@ -37,10 +45,14 @@ class AuthProvider {
         ? Hive.box(HiveConstants.sessionBox)
         : await Hive.openBox(HiveConstants.sessionBox);
 
+    // Create secure storage
+    const secureStorage = FlutterSecureStorage();
+
     // Create local data source
     final localDataSource = AuthLocalDataSourceImpl(
       usersBox: usersBox,
       sessionBox: sessionBox,
+      secureStorage: secureStorage,
     );
 
     // Create API service
@@ -50,6 +62,8 @@ class AuthProvider {
     final storedToken = localDataSource.getToken();
     if (storedToken != null) {
       _apiService.setAuthToken(storedToken);
+      // Ensure token is also in secure storage for ApiClient
+      await secureStorage.write(key: 'auth_token', value: storedToken);
     }
 
     // Create remote data source

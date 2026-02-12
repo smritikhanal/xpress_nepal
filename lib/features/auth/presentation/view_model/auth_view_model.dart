@@ -36,6 +36,8 @@ class AuthViewModel extends ChangeNotifier {
     required String password,
     String? phone,
     String role = 'customer',
+    String? shopName,
+    String? businessDescription,
   }) async {
     _state = AuthState.loading();
     notifyListeners();
@@ -46,6 +48,8 @@ class AuthViewModel extends ChangeNotifier {
       password: password,
       phone: phone,
       role: role,
+      shopName: shopName,
+      businessDescription: businessDescription,
     );
 
     if (result.success && result.user != null) {

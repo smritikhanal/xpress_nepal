@@ -239,4 +239,47 @@ class ApiService {
       );
     }
   }
+
+  /// Make a Multipart POST request (for file uploads)
+  Future<ApiResponse<Map<String, dynamic>>> postMultipart(
+    String url, {
+    required File file,
+    String fieldName = 'image',
+    bool requiresAuth = false,
+  }) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Add headers
+      request.headers['Accept'] = 'application/json';
+      if (requiresAuth && _authToken != null) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+
+      // Add file
+      final multipartFile = await http.MultipartFile.fromPath(
+        fieldName,
+        file.path,
+      );
+      request.files.add(multipartFile);
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return ApiResponse(
+        success: false,
+        message: 'No internet connection. Please check your network.',
+        statusCode: 0,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Upload failed: ${e.toString()}',
+        statusCode: 0,
+      );
+    }
+  }
 }

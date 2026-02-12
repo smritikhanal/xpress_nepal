@@ -16,6 +16,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     String? phone,
     String role = 'customer',
+    String? shopName,
+    String? businessDescription,
   }) async {
     try {
       final response = await _apiService.post(
@@ -26,25 +28,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'password': password,
           'role': role,
           if (phone != null) 'phone': phone,
+          if (shopName != null) 'shopName': shopName.trim(),
+          if (businessDescription != null)
+            'businessDescription': businessDescription.trim(),
         },
       );
 
       if (response.success && response.data != null) {
-        final data = response.data!;
-        final token = data['token'] as String?;
-        final userJson = data['user'] as Map<String, dynamic>?;
+        // Backend returns: { success, message, data: { token, user } }
+        final responseBody = response.data!;
+        final nestedData = responseBody['data'] as Map<String, dynamic>?;
 
-        if (userJson != null && token != null) {
-          _apiService.setAuthToken(token);
+        if (nestedData != null) {
+          final token = nestedData['token'] as String?;
+          final userJson = nestedData['user'] as Map<String, dynamic>?;
 
-          final user = UserModel.fromJson(userJson, token: token);
+          if (userJson != null && token != null) {
+            _apiService.setAuthToken(token);
 
-          return AuthApiResult(
-            success: true,
-            message: response.message ?? 'Registration successful',
-            user: user,
-            token: token,
-          );
+            final user = UserModel.fromJson(userJson, token: token);
+
+            return AuthApiResult(
+              success: true,
+              message: response.message ?? 'Registration successful',
+              user: user,
+              token: token,
+            );
+          }
         }
       }
 
@@ -72,21 +82,26 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.success && response.data != null) {
-        final data = response.data!;
-        final token = data['token'] as String?;
-        final userJson = data['user'] as Map<String, dynamic>?;
+        // Backend returns: { success, message, data: { token, user } }
+        final responseBody = response.data!;
+        final nestedData = responseBody['data'] as Map<String, dynamic>?;
 
-        if (userJson != null && token != null) {
-          _apiService.setAuthToken(token);
+        if (nestedData != null) {
+          final token = nestedData['token'] as String?;
+          final userJson = nestedData['user'] as Map<String, dynamic>?;
 
-          final user = UserModel.fromJson(userJson, token: token);
+          if (userJson != null && token != null) {
+            _apiService.setAuthToken(token);
 
-          return AuthApiResult(
-            success: true,
-            message: response.message ?? 'Login successful',
-            user: user,
-            token: token,
-          );
+            final user = UserModel.fromJson(userJson, token: token);
+
+            return AuthApiResult(
+              success: true,
+              message: response.message ?? 'Login successful',
+              user: user,
+              token: token,
+            );
+          }
         }
       }
 

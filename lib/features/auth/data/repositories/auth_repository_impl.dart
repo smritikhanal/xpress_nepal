@@ -22,6 +22,8 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     String? phone,
     String role = 'customer',
+    String? shopName,
+    String? businessDescription,
   }) async {
     try {
       // Call remote API to register
@@ -31,6 +33,8 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         phone: phone,
         role: role,
+        shopName: shopName,
+        businessDescription: businessDescription,
       );
 
       if (result.success && result.user != null) {

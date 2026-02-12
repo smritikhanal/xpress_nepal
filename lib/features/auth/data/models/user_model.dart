@@ -33,6 +33,12 @@ class UserModel extends HiveObject {
   @HiveField(8)
   final String? updatedAt;
 
+  @HiveField(9)
+  final String? shopName;
+
+  @HiveField(10)
+  final String? businessDescription;
+
   UserModel({
     required this.id,
     required this.name,
@@ -43,6 +49,8 @@ class UserModel extends HiveObject {
     this.token,
     this.createdAt,
     this.updatedAt,
+    this.shopName,
+    this.businessDescription,
   });
 
   // ================= MODEL → ENTITY =================
@@ -54,6 +62,8 @@ class UserModel extends HiveObject {
       phone: phone,
       role: role,
       isActive: isActive,
+      shopName: shopName,
+      businessDescription: businessDescription,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -68,6 +78,8 @@ class UserModel extends HiveObject {
       phone: entity.phone,
       role: entity.role,
       isActive: entity.isActive,
+      shopName: entity.shopName,
+      businessDescription: entity.businessDescription,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       token: token,
@@ -75,17 +87,17 @@ class UserModel extends HiveObject {
   }
 
   // ================= JSON → MODEL =================
-  factory UserModel.fromJson(
-    Map<String, dynamic> json, {
-    String? token,
-  }) {
+  factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
     return UserModel(
-      id: json['_id'] as String? ?? '',
+      // Backend auth response uses 'id', MongoDB queries use '_id'
+      id: (json['id'] ?? json['_id']) as String? ?? '',
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,
       role: json['role'] as String? ?? 'customer',
       isActive: json['isActive'] as bool? ?? true,
+      shopName: json['shopName'] as String?,
+      businessDescription: json['businessDescription'] as String?,
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
       token: token,
@@ -100,6 +112,8 @@ class UserModel extends HiveObject {
       'phone': phone,
       'role': role,
       'isActive': isActive,
+      'shopName': shopName,
+      'businessDescription': businessDescription,
     };
   }
 
@@ -114,6 +128,8 @@ class UserModel extends HiveObject {
     String? token,
     String? createdAt,
     String? updatedAt,
+    String? shopName,
+    String? businessDescription,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -125,6 +141,8 @@ class UserModel extends HiveObject {
       token: token ?? this.token,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      shopName: shopName ?? this.shopName,
+      businessDescription: businessDescription ?? this.businessDescription,
     );
   }
 
