@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xpress_nepal/app/providers/theme_provider.dart';
 import 'package:xpress_nepal/core/services/hive_service.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/features/addresses/presentation/providers/address_provider.dart';
@@ -13,6 +14,10 @@ void main() async {
   // Initialize Hive service (handles Hive init and adapter registration)
   final hiveService = HiveService();
   await hiveService.init();
+
+  // Initialize Theme Provider
+  final themeProvider = ThemeProvider.instance;
+  await themeProvider.initialize();
 
   // Initialize Auth Provider (sets up all auth dependencies)
   final authProvider = AuthProvider.instance;
