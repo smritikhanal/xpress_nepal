@@ -1,10 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ThemeProvider extends ChangeNotifier {
+enum AppThemePreference { followSystem, autoTimeBased, manualLight, manualDark }
+
+class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   static ThemeProvider? _instance;
-  ThemeMode _themeMode = ThemeMode.light;
+  static const String _themePreferenceKey = 'theme_preference_mode';
+  static const String _legacyIsDarkModeKey = 'isDarkMode';
+
+  ThemeMode _themeMode = ThemeMode.system;
+  AppThemePreference _preference = AppThemePreference.followSystem;
   bool _isInitialized = false;
+  DateTime? _nextAutoRefreshAt;
+  Timer? _autoModeTimer;
 
   ThemeProvider._();
 
@@ -14,33 +24,149 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   ThemeMode get themeMode => _themeMode;
+  AppThemePreference get preference => _preference;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
+  DateTime? get nextAutoRefreshAt => _nextAutoRefreshAt;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
 
+    WidgetsBinding.instance.addObserver(this);
+
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('isDarkMode') ?? false;
-    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    final storedPreference = prefs.getString(_themePreferenceKey);
+
+    if (storedPreference == null) {
+      // Backward compatibility with legacy bool storage.
+      final legacyIsDark = prefs.getBool(_legacyIsDarkModeKey);
+      if (legacyIsDark != null) {
+        _preference = legacyIsDark
+            ? AppThemePreference.manualDark
+            : AppThemePreference.manualLight;
+      } else {
+        _preference = AppThemePreference.followSystem;
+      }
+      await prefs.setString(_themePreferenceKey, _preference.name);
+    } else {
+      _preference = AppThemePreference.values.firstWhere(
+        (value) => value.name == storedPreference,
+        orElse: () => AppThemePreference.followSystem,
+      );
+    }
+
+    _resolveThemeModeAndSchedule();
     _isInitialized = true;
     notifyListeners();
   }
 
   Future<void> toggleTheme() async {
-    _themeMode = _themeMode == ThemeMode.light
-        ? ThemeMode.dark
-        : ThemeMode.light;
-    notifyListeners();
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', _themeMode == ThemeMode.dark);
+    final nextPreference = _themeMode == ThemeMode.dark
+        ? AppThemePreference.manualLight
+        : AppThemePreference.manualDark;
+    await setThemePreference(nextPreference);
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    _themeMode = mode;
+    final preference = switch (mode) {
+      ThemeMode.system => AppThemePreference.followSystem,
+      ThemeMode.dark => AppThemePreference.manualDark,
+      ThemeMode.light => AppThemePreference.manualLight,
+    };
+    await setThemePreference(preference);
+  }
+
+  Future<void> setThemePreference(AppThemePreference preference) async {
+    _preference = preference;
+    _resolveThemeModeAndSchedule();
+
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', mode == ThemeMode.dark);
+    await prefs.setString(_themePreferenceKey, _preference.name);
+    await prefs.setBool(_legacyIsDarkModeKey, _themeMode == ThemeMode.dark);
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (_preference == AppThemePreference.followSystem) {
+      _resolveThemeModeAndSchedule();
+      notifyListeners();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _preference == AppThemePreference.autoTimeBased) {
+      _resolveThemeModeAndSchedule();
+      notifyListeners();
+    }
+  }
+
+  void _resolveThemeModeAndSchedule() {
+    _nextAutoRefreshAt = null;
+    _autoModeTimer?.cancel();
+
+    switch (_preference) {
+      case AppThemePreference.followSystem:
+        _themeMode = ThemeMode.system;
+        break;
+      case AppThemePreference.manualLight:
+        _themeMode = ThemeMode.light;
+        break;
+      case AppThemePreference.manualDark:
+        _themeMode = ThemeMode.dark;
+        break;
+      case AppThemePreference.autoTimeBased:
+        _themeMode = _isNightTime(DateTime.now())
+            ? ThemeMode.dark
+            : ThemeMode.light;
+        _nextAutoRefreshAt = _nextThemeBoundary(DateTime.now());
+        _scheduleAutoThemeTick();
+        break;
+    }
+  }
+
+  void _scheduleAutoThemeTick() {
+    final nextBoundary = _nextAutoRefreshAt;
+    if (nextBoundary == null) return;
+
+    final now = DateTime.now();
+    final waitDuration = nextBoundary.difference(now);
+    final clampedDuration = waitDuration.isNegative
+        ? Duration.zero
+        : waitDuration;
+
+    _autoModeTimer = Timer(clampedDuration, () {
+      if (_preference != AppThemePreference.autoTimeBased) return;
+
+      _resolveThemeModeAndSchedule();
+      notifyListeners();
+    });
+  }
+
+  bool _isNightTime(DateTime now) {
+    final hour = now.hour;
+    return hour >= 18 || hour < 6;
+  }
+
+  DateTime _nextThemeBoundary(DateTime now) {
+    final sixAmToday = DateTime(now.year, now.month, now.day, 6);
+    final sixPmToday = DateTime(now.year, now.month, now.day, 18);
+
+    if (now.isBefore(sixAmToday)) {
+      return sixAmToday;
+    }
+    if (now.isBefore(sixPmToday)) {
+      return sixPmToday;
+    }
+    return sixAmToday.add(const Duration(days: 1));
+  }
+
+  @override
+  void dispose() {
+    _autoModeTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 }
