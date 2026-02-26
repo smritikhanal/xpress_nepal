@@ -1,18 +1,25 @@
+import 'dart:math';
+
+import 'package:xpress_nepal/core/services/connectivity/network_info.dart';
 import 'package:xpress_nepal/features/auth/domain/datasources/auth_local_datasource.dart';
 import 'package:xpress_nepal/features/auth/domain/datasources/auth_remote_datasource.dart';
 import 'package:xpress_nepal/features/auth/domain/entities/user_entity.dart';
 import 'package:xpress_nepal/features/auth/domain/repositories/auth_repository.dart';
+import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 
 /// Implementation of AuthRepository
 /// Handles business logic for authentication operations using remote API
 class AuthRepositoryImpl implements AuthRepository {
+  final INetworkInfo _networkInfo;
   final AuthLocalDataSource _localDataSource;
   final AuthRemoteDataSource _remoteDataSource;
 
   AuthRepositoryImpl({
+    required INetworkInfo networkInfo,
     required AuthLocalDataSource localDataSource,
     required AuthRemoteDataSource remoteDataSource,
-  }) : _localDataSource = localDataSource,
+  }) : _networkInfo = networkInfo,
+       _localDataSource = localDataSource,
        _remoteDataSource = remoteDataSource;
 
   @override
@@ -26,40 +33,80 @@ class AuthRepositoryImpl implements AuthRepository {
     String? businessDescription,
   }) async {
     try {
-      // Call remote API to register
-      final result = await _remoteDataSource.register(
+      final isOnline = await _networkInfo.isConnected;
+
+      if (isOnline) {
+        // Call remote API to register
+        final result = await _remoteDataSource.register(
+          name: name,
+          email: email,
+          password: password,
+          phone: phone,
+          role: role,
+          shopName: shopName,
+          businessDescription: businessDescription,
+        );
+
+        if (result.success && result.user != null) {
+          await _persistAuthenticatedUser(result.user!, token: result.token);
+
+          return AuthResult.success(
+            message: result.message ?? 'Account created successfully',
+            user: result.user!.toEntity(),
+          );
+        }
+
+        return AuthResult.failure(result.message ?? 'Registration failed');
+      }
+
+      return await _signUpOffline(
         name: name,
         email: email,
-        password: password,
         phone: phone,
         role: role,
         shopName: shopName,
         businessDescription: businessDescription,
       );
+    } catch (e) {
+      return AuthResult.failure('Registration failed: ${e.toString()}');
+    }
+  }
 
-      if (result.success && result.user != null) {
-        // User is already a UserModel, save directly
-        await _localDataSource.saveUser(result.user!);
-
-        // Save session with user ID
-        await _localDataSource.saveSession(result.user!.id);
-
-        // Save token to session
-        if (result.token != null) {
-          await _localDataSource.saveToken(result.token!);
-        }
-
-        return AuthResult.success(
-          message: result.message ?? 'Account created successfully',
-          user: result.user!.toEntity(),
+  Future<AuthResult> _signUpOffline({
+    required String name,
+    required String email,
+    String? phone,
+    required String role,
+    String? shopName,
+    String? businessDescription,
+  }) async {
+    try {
+      final existingUser = _localDataSource.findUserByEmail(email);
+      if (existingUser != null) {
+        return AuthResult.failure(
+          'Account already exists locally. Please connect to the internet to sync.',
         );
       }
 
-      return AuthResult.failure(result.message ?? 'Registration failed');
-    } catch (e) {
-      return AuthResult.failure(
-        'An error occurred during registration: ${e.toString()}',
+      final localUser = UserModel(
+        id: _generateOfflineUserId(),
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        phone: phone,
+        role: role,
+        shopName: shopName,
+        businessDescription: businessDescription,
+        isActive: true,
       );
+
+      await _persistAuthenticatedUser(localUser, token: localUser.token);
+
+      return AuthResult.success(
+        message: 'Account created locally while offline.',
+        user: localUser.toEntity(),
+      );
+    } catch (e) {
+      return AuthResult.failure('Offline registration failed: ${e.toString()}');
     }
   }
 
@@ -69,42 +116,65 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      // Call remote API to login
-      final result = await _remoteDataSource.login(
-        email: email,
-        password: password,
-      );
+      final isOnline = await _networkInfo.isConnected;
 
-      if (result.success && result.user != null) {
-        // User is already a UserModel, save directly
-        await _localDataSource.saveUser(result.user!);
+      if (isOnline) {
+        // Call remote API to login
+        final result = await _remoteDataSource.login(
+          email: email,
+          password: password,
+        );
 
-        // Save session with user ID
-        await _localDataSource.saveSession(result.user!.id);
+        if (result.success && result.user != null) {
+          await _persistAuthenticatedUser(result.user!, token: result.token);
 
-        // Save token to session
-        if (result.token != null) {
-          await _localDataSource.saveToken(result.token!);
+          return AuthResult.success(
+            message: result.message ?? 'Login successful',
+            user: result.user!.toEntity(),
+          );
         }
 
-        return AuthResult.success(
-          message: result.message ?? 'Login successful',
-          user: result.user!.toEntity(),
+        return AuthResult.failure(result.message ?? 'Login failed');
+      }
+
+      return await _loginOffline(email: email);
+    } catch (e) {
+      return AuthResult.failure('Login failed: ${e.toString()}');
+    }
+  }
+
+  Future<AuthResult> _loginOffline({required String email}) async {
+    try {
+      final localUser = _localDataSource.findUserByEmail(email);
+      if (localUser == null) {
+        return AuthResult.failure(
+          'No local account found. Please connect to the internet and login once.',
         );
       }
 
-      return AuthResult.failure(result.message ?? 'Login failed');
-    } catch (e) {
-      return AuthResult.failure(
-        'An error occurred during login: ${e.toString()}',
+      await _persistAuthenticatedUser(localUser, token: localUser.token);
+
+      return AuthResult.success(
+        message: 'Logged in using local data (offline mode).',
+        user: localUser.toEntity(),
       );
+    } catch (e) {
+      return AuthResult.failure('Offline login failed: ${e.toString()}');
     }
   }
 
   @override
   Future<void> logout() async {
-    // Call remote logout
-    await _remoteDataSource.logout();
+    final isOnline = await _networkInfo.isConnected;
+
+    // Call remote logout only when online
+    if (isOnline) {
+      try {
+        await _remoteDataSource.logout();
+      } catch (_) {
+        // Continue local cleanup regardless of API logout failure.
+      }
+    }
 
     // Clear local session
     await _localDataSource.clearSession();
@@ -125,8 +195,59 @@ class AuthRepositoryImpl implements AuthRepository {
     return user?.toEntity();
   }
 
+  @override
+  String? getCurrentToken() {
+    return _localDataSource.getToken();
+  }
+
+  @override
+  Future<AuthResult> loginWithStoredToken({
+    required String userId,
+    required String token,
+  }) async {
+    try {
+      final user = _localDataSource.getUserById(userId);
+      if (user == null) {
+        return AuthResult.failure(
+          'Stored session user could not be found. Please login with password.',
+        );
+      }
+
+      await _localDataSource.saveSession(userId);
+      await _localDataSource.saveToken(token);
+
+      return AuthResult.success(
+        message: 'Biometric login successful',
+        user: user.toEntity(),
+      );
+    } catch (e) {
+      return AuthResult.failure(
+        'Unable to restore session from secure token: ${e.toString()}',
+      );
+    }
+  }
+
   /// Get the stored auth token
   String? getToken() {
     return _localDataSource.getToken();
+  }
+
+  Future<void> _persistAuthenticatedUser(
+    UserModel user, {
+    String? token,
+  }) async {
+    await _localDataSource.saveUser(user);
+    await _localDataSource.saveSession(user.id);
+
+    final finalToken = token ?? user.token;
+    if (finalToken != null && finalToken.isNotEmpty) {
+      await _localDataSource.saveToken(finalToken);
+    }
+  }
+
+  String _generateOfflineUserId() {
+    final millis = DateTime.now().millisecondsSinceEpoch;
+    final random = Random().nextInt(99999).toString().padLeft(5, '0');
+    return 'offline_$millis$random';
   }
 }

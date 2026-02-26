@@ -42,4 +42,14 @@ abstract class AuthRepository {
 
   /// Get the currently logged-in user
   UserEntity? getCurrentUser();
+
+  /// Get the currently stored authentication token
+  String? getCurrentToken();
+
+  /// Restore an authenticated session from a previously issued token
+  /// (for example after successful biometric unlock).
+  Future<AuthResult> loginWithStoredToken({
+    required String userId,
+    required String token,
+  });
 }
