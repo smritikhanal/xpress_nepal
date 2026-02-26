@@ -29,6 +29,9 @@ class AuthViewModel extends ChangeNotifier {
   /// Check if user is logged in (synchronous check)
   bool get isLoggedIn => _authRepository.isLoggedIn();
 
+  /// Get currently stored auth token (if any)
+  String? get currentToken => _authRepository.getCurrentToken();
+
   /// Sign up with name, email, password, and optional phone/role
   Future<bool> signUp({
     required String name,
@@ -82,6 +85,30 @@ class AuthViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Login by restoring a previously stored authenticated token.
+  Future<bool> loginWithStoredToken({
+    required String userId,
+    required String token,
+  }) async {
+    _state = AuthState.loading();
+    notifyListeners();
+
+    final result = await _authRepository.loginWithStoredToken(
+      userId: userId,
+      token: token,
+    );
+
+    if (result.success && result.user != null) {
+      _state = AuthState.authenticated(result.user!);
+      notifyListeners();
+      return true;
+    }
+
+    _state = AuthState.error(result.message ?? 'Biometric login failed');
+    notifyListeners();
+    return false;
   }
 
   /// Logout current user

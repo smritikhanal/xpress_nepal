@@ -1,14 +1,17 @@
 import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:xpress_nepal/core/constants/hive_constants.dart';
 import 'package:xpress_nepal/core/services/api_service.dart';
+import 'package:xpress_nepal/core/services/connectivity/network_info.dart';
 import 'package:xpress_nepal/features/auth/data/datasources/auth_local_datasource_impl.dart';
 import 'package:xpress_nepal/features/auth/data/datasources/auth_remote_datasource_impl.dart';
 import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 import 'package:xpress_nepal/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:xpress_nepal/features/auth/domain/repositories/auth_repository.dart';
 import 'package:xpress_nepal/features/auth/presentation/view_model/auth_view_model.dart';
+import 'package:xpress_nepal/features/auth/services/biometric_auth_manager.dart';
 
 /// Provider class for creating and managing auth dependencies
 /// Uses simple dependency injection pattern
@@ -18,6 +21,7 @@ class AuthProvider {
   late final AuthRepository _authRepository;
   late final AuthViewModel _authViewModel;
   late final ApiService _apiService;
+  late final BiometricAuthManager _biometricAuthManager;
 
   AuthProvider._internal();
 
@@ -68,15 +72,21 @@ class AuthProvider {
 
     // Create remote data source
     final remoteDataSource = AuthRemoteDataSourceImpl(apiService: _apiService);
+    final networkInfo = NetworkInfo(Connectivity());
 
     // Create repository
     _authRepository = AuthRepositoryImpl(
+      networkInfo: networkInfo,
       localDataSource: localDataSource,
       remoteDataSource: remoteDataSource,
     );
 
     // Create view model
     _authViewModel = AuthViewModel(authRepository: _authRepository);
+
+    // Create biometric manager
+    _biometricAuthManager = BiometricAuthManager(authViewModel: _authViewModel);
+    await _biometricAuthManager.initialize();
   }
 
   /// Get the auth repository
@@ -87,6 +97,9 @@ class AuthProvider {
 
   /// Get the API service
   ApiService get apiService => _apiService;
+
+  /// Get biometric auth manager
+  BiometricAuthManager get biometricAuthManager => _biometricAuthManager;
 
   /// Check if user is logged in
   bool get isLoggedIn => _authRepository.isLoggedIn();
