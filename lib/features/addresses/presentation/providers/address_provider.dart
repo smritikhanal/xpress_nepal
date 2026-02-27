@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:xpress_nepal/core/services/api_service.dart';
 import 'package:xpress_nepal/features/addresses/data/datasources/address_remote_datasource_impl.dart';
 import 'package:xpress_nepal/features/addresses/data/repositories/address_repository_impl.dart';
@@ -9,6 +10,12 @@ import 'package:xpress_nepal/features/addresses/presentation/view_model/address_
 class AddressProvider {
   static AddressProvider? _instance;
   static AddressProvider get instance => _instance ??= AddressProvider._();
+
+  /// Set mock instance for testing
+  @visibleForTesting
+  static set instance(AddressProvider? mock) {
+    _instance = mock;
+  }
 
   AddressProvider._();
 
