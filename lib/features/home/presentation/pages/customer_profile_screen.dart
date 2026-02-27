@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:xpress_nepal/app/providers/theme_provider.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/login_screen.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
@@ -27,6 +28,186 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     super.initState();
     _authViewModel.addListener(_onStateChange);
     _wishlistProvider = WishlistProvider(ApiClient());
+  }
+
+  Future<void> _showThemePreferencePicker() async {
+    if (!mounted) return;
+
+    final currentPreference = ThemeProvider.instance.preference;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        AppThemePreference selectedPreference = currentPreference;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Theme Mode',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildThemeOptionTile(
+                        title: 'Follow System Theme',
+                        subtitle: 'Match your device theme settings',
+                        selected:
+                            selectedPreference ==
+                            AppThemePreference.followSystem,
+                        onTap: () {
+                          setModalState(() {
+                            selectedPreference =
+                                AppThemePreference.followSystem;
+                          });
+                        },
+                      ),
+                      _buildThemeOptionTile(
+                        title: 'Auto Time-Based Theme',
+                        subtitle: 'Dark mode from 6:00 PM to 6:00 AM',
+                        selected:
+                            selectedPreference ==
+                            AppThemePreference.autoTimeBased,
+                        onTap: () {
+                          setModalState(() {
+                            selectedPreference =
+                                AppThemePreference.autoTimeBased;
+                          });
+                        },
+                      ),
+                      _buildThemeOptionTile(
+                        title: 'Manual Light Mode',
+                        subtitle: 'Always use light theme',
+                        selected:
+                            selectedPreference ==
+                            AppThemePreference.manualLight,
+                        onTap: () {
+                          setModalState(() {
+                            selectedPreference = AppThemePreference.manualLight;
+                          });
+                        },
+                      ),
+                      _buildThemeOptionTile(
+                        title: 'Manual Dark Mode',
+                        subtitle: 'Always use dark theme',
+                        selected:
+                            selectedPreference == AppThemePreference.manualDark,
+                        onTap: () {
+                          setModalState(() {
+                            selectedPreference = AppThemePreference.manualDark;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            await ThemeProvider.instance.setThemePreference(
+                              selectedPreference,
+                            );
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Apply'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Widget _buildThemeOptionTile({
+    required String title,
+    required String subtitle,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: onTap,
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? AppColors.primary : AppColors.textHint,
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+  }
+
+  Future<void> _handleBiometricToggle(bool enable) async {
+    final biometricManager = AuthProvider.instance.biometricAuthManager;
+
+    if (!enable) {
+      await biometricManager.setBiometricLoginEnabled(false);
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fingerprint login disabled.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final capability = await biometricManager.checkCapability();
+    if (!capability.available) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(capability.message ?? 'Biometric unavailable.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final hasSecureToken = await biometricManager
+        .saveCurrentSessionForBiometric();
+    if (!hasSecureToken) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No secure auth token available yet. Please login again and retry.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    await biometricManager.setBiometricLoginEnabled(true);
+    if (!mounted) return;
+
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Fingerprint login enabled.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -60,7 +241,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
-              backgroundColor: AppColors.error.withOpacity(0.1),
+              backgroundColor: AppColors.error.withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -90,11 +271,21 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = _authViewModel.state.user;
+    final themePreference = ThemeProvider.instance.preference;
+    final biometricEnabled =
+        AuthProvider.instance.biometricAuthManager.biometricLoginEnabled;
+
+    final themeSubtitle = switch (themePreference) {
+      AppThemePreference.followSystem => 'Follow device appearance',
+      AppThemePreference.autoTimeBased => 'Auto dark mode from 6 PM to 6 AM',
+      AppThemePreference.manualLight => 'Always light mode',
+      AppThemePreference.manualDark => 'Always dark mode',
+    };
 
     return ChangeNotifierProvider.value(
       value: _wishlistProvider,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(
@@ -176,6 +367,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         },
                       ),
                       _ProfileMenuItem(
+                        icon: Icons.palette_outlined,
+                        title: 'Theme',
+                        subtitle: themeSubtitle,
+                        onTap: _showThemePreferencePicker,
+                      ),
+                      _ProfileSwitchMenuItem(
+                        icon: Icons.fingerprint_rounded,
+                        title: 'Fingerprint Login',
+                        subtitle: 'Use biometrics to unlock secure login token',
+                        value: biometricEnabled,
+                        onChanged: _handleBiometricToggle,
+                      ),
+                      _ProfileMenuItem(
                         icon: Icons.security,
                         title: 'Security',
                         subtitle: 'Change your password',
@@ -238,10 +442,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -276,7 +480,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             email,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: 16),
@@ -295,6 +499,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             label: const Text('Edit Profile'),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
+              textStyle: const TextStyle(
+                inherit: false,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+                color: Colors.white,
+              ),
               side: const BorderSide(color: Colors.white, width: 1.5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -327,14 +538,14 @@ class _ProfileMenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isDestructive ? AppColors.error : AppColors.textPrimary;
     final iconBgColor = isDestructive
-        ? AppColors.error.withOpacity(0.1)
+        ? AppColors.error.withValues(alpha: 0.1)
         : AppColors.primaryLight;
     final iconColor = isDestructive ? AppColors.error : AppColors.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
@@ -392,6 +603,78 @@ class _ProfileMenuItem extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSwitchMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _ProfileSwitchMenuItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch.adaptive(value: value, onChanged: onChanged),
+            ],
           ),
         ),
       ),

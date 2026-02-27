@@ -92,8 +92,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -113,13 +115,15 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   }
 
   Widget _buildSearchHeader() {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: theme.cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -131,10 +135,14 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
           TextField(
             controller: _searchController,
             focusNode: _focusNode,
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
               hintText: 'Search products, brands, categories...',
-              hintStyle: const TextStyle(color: AppColors.textHint),
+              hintStyle: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.65,
+                ),
+              ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
                 color: AppColors.primary,
@@ -149,7 +157,9 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     )
                   : null,
               filled: true,
-              fillColor: AppColors.surfaceLight,
+              fillColor:
+                  theme.inputDecorationTheme.fillColor ??
+                  theme.colorScheme.surfaceContainerHighest,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -219,6 +229,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   }
 
   Widget _buildSearchSuggestions() {
+    final theme = Theme.of(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -231,11 +243,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               children: [
                 const Text(
                   'Recent Searches',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 TextButton(
                   onPressed: () {
@@ -261,7 +269,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
+                      color: theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: AppColors.borderLight),
                     ),
@@ -276,8 +284,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                         const SizedBox(width: 6),
                         Text(
                           search,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+                          style: TextStyle(
+                            color: theme.textTheme.bodyMedium?.color,
                             fontSize: 14,
                           ),
                         ),
@@ -293,11 +301,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
           // Popular Categories
           const Text(
             'Popular Categories',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           GridView.builder(
@@ -319,12 +323,12 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackground,
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.borderLight),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -351,7 +355,6 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
@@ -369,11 +372,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
           // Trending Searches
           const Text(
             'Trending Now',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           ...List.generate(5, (index) {
@@ -469,15 +468,15 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   Icon(
                     Icons.search_off_rounded,
                     size: 80,
-                    color: AppColors.textHint.withOpacity(0.5),
+                    color: AppColors.textHint.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No results for "${_searchController.text}"',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -507,8 +506,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                 children: [
                   Text(
                     '${state.products.length} results found',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -575,11 +574,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -651,11 +650,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 4,
                           ),
                         ],
@@ -681,10 +680,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   children: [
                     Text(
                       product.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
