@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/features/auth/presentation/pages/login_screen.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/features/home/presentation/pages/home_screen.dart';
 import 'package:xpress_nepal/features/onboarding/presentation/pages/onboarding_screen.dart';
+import 'package:xpress_nepal/features/seller/presentation/pages/seller_dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -77,13 +79,36 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
       // Check if user is logged in using AuthProvider
-      final isLoggedIn = AuthProvider.instance.isLoggedIn;
+      final authProvider = AuthProvider.instance;
+      final authViewModel = AuthProvider.instance.authViewModel;
+      final isLoggedIn = authViewModel.isLoggedIn;
+      final user = authViewModel.state.user;
+
+      Widget nextScreen;
+      if (isLoggedIn) {
+        nextScreen = _resolveHomeForUser(user?.role);
+      } else {
+        final biometricManager = authProvider.biometricAuthManager;
+        final isBiometricEnabled = biometricManager.biometricLoginEnabled;
+        final hasCredentials = await biometricManager.hasSecureCredentials();
+
+        if (isBiometricEnabled && hasCredentials) {
+          final biometricResult = await biometricManager.authenticateAndLogin();
+          if (biometricResult.success) {
+            final authedUser = authViewModel.state.user;
+            nextScreen = _resolveHomeForUser(authedUser?.role);
+          } else {
+            nextScreen = LoginScreen(initialMessage: biometricResult.message);
+          }
+        } else {
+          nextScreen = const OnboardingScreen();
+        }
+      }
 
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              isLoggedIn ? const HomeScreen() : const OnboardingScreen(),
+          pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -91,6 +116,13 @@ class _SplashScreenState extends State<SplashScreen>
         ),
       );
     }
+  }
+
+  Widget _resolveHomeForUser(String? role) {
+    if (role == 'seller') {
+      return const SellerDashboardScreen();
+    }
+    return const HomeScreen();
   }
 
   @override
