@@ -1,43 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/home_content_provider.dart';
 import 'package:xpress_nepal/widgets/section_header.dart';
 
 class TopSellersSection extends StatelessWidget {
   const TopSellersSection({Key? key}) : super(key: key);
 
-  static final List<Map<String, dynamic>> _topSellers = [
-    {
-      'name': 'Tech Store',
-      'rating': 4.9,
-      'products': 234,
-      'image': 'assets/images/sellers/tech.png',
-      'verified': true,
-    },
-    {
-      'name': 'Fashion Hub',
-      'rating': 4.8,
-      'products': 567,
-      'image': 'assets/images/sellers/fashion.png',
-      'verified': true,
-    },
-    {
-      'name': 'Home Decor',
-      'rating': 4.7,
-      'products': 189,
-      'image': 'assets/images/sellers/home.png',
-      'verified': false,
-    },
-    {
-      'name': 'Sports World',
-      'rating': 4.8,
-      'products': 321,
-      'image': 'assets/images/sellers/sports.png',
-      'verified': true,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final topSellers = context.watch<HomeContentProvider>().topSellers;
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth >= 650;
     final listHeight = isTablet ? 160.0 : 140.0;
@@ -55,9 +27,9 @@ class TopSellersSection extends StatelessWidget {
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             scrollDirection: Axis.horizontal,
-            itemCount: _topSellers.length,
+            itemCount: topSellers.length,
             itemBuilder: (context, index) {
-              return _buildSellerCard(_topSellers[index], isTablet: isTablet);
+              return _buildSellerCard(topSellers[index], isTablet: isTablet);
             },
           ),
         ),

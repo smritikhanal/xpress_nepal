@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/home_content_provider.dart';
 import 'package:xpress_nepal/widgets/section_header.dart';
 
 class CategoriesSection extends StatelessWidget {
   const CategoriesSection({Key? key}) : super(key: key);
 
-  static final List<Map<String, dynamic>> _categories = [
-    {'name': 'Fashion', 'icon': Icons.checkroom_rounded, 'items': 1234},
-    {'name': 'Electronics', 'icon': Icons.devices_rounded, 'items': 856},
-    {'name': 'Home', 'icon': Icons.home_rounded, 'items': 654},
-    {'name': 'Sports', 'icon': Icons.sports_basketball_rounded, 'items': 432},
-    {'name': 'Beauty', 'icon': Icons.face_rounded, 'items': 567},
-    {'name': 'Books', 'icon': Icons.menu_book_rounded, 'items': 890},
-    {'name': 'Toys', 'icon': Icons.toys_rounded, 'items': 321},
-    {'name': 'More', 'icon': Icons.more_horiz_rounded, 'items': 0},
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final categories = context.watch<HomeContentProvider>().categories;
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth >= 650;
     final crossAxisCount = isTablet ? 8 : 4;
@@ -42,9 +34,9 @@ class CategoriesSection extends StatelessWidget {
               crossAxisSpacing: 12,
               childAspectRatio: childAspectRatio,
             ),
-            itemCount: _categories.length,
+            itemCount: categories.length,
             itemBuilder: (context, index) {
-              return _buildCategoryItem(_categories[index], isTablet: isTablet);
+              return _buildCategoryItem(categories[index], isTablet: isTablet);
             },
           ),
         ),
@@ -79,7 +71,7 @@ class CategoriesSection extends StatelessWidget {
               ],
             ),
             child: Icon(
-              category['icon'],
+              _resolveCategoryIcon(category['icon'] as String?),
               color: AppColors.primary,
               size: iconSize,
             ),
@@ -99,5 +91,28 @@ class CategoriesSection extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  IconData _resolveCategoryIcon(String? iconName) {
+    switch (iconName) {
+      case 'checkroom_rounded':
+        return Icons.checkroom_rounded;
+      case 'devices_rounded':
+        return Icons.devices_rounded;
+      case 'home_rounded':
+        return Icons.home_rounded;
+      case 'sports_basketball_rounded':
+        return Icons.sports_basketball_rounded;
+      case 'face_rounded':
+        return Icons.face_rounded;
+      case 'menu_book_rounded':
+        return Icons.menu_book_rounded;
+      case 'toys_rounded':
+        return Icons.toys_rounded;
+      case 'more_horiz_rounded':
+        return Icons.more_horiz_rounded;
+      default:
+        return Icons.category_rounded;
+    }
   }
 }

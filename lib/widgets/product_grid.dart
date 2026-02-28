@@ -5,6 +5,9 @@ import 'package:xpress_nepal/features/product/presentation/pages/customer_produc
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
 import 'package:xpress_nepal/widgets/section_header.dart';
+import 'package:xpress_nepal/core/utils/image_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provider.dart';
 
 /// Sample product for fallback/placeholder display
 class SampleProduct {
@@ -202,7 +205,7 @@ class ProductCardFromEntity extends StatelessWidget {
                     ),
                     child: imageUrl != null
                         ? Image.network(
-                            imageUrl,
+                            ImageHelper.fixImageUrl(imageUrl),
                             fit: BoxFit.cover,
                             width: double.infinity,
                             errorBuilder: (context, error, stackTrace) {
@@ -239,24 +242,38 @@ class ProductCardFromEntity extends StatelessWidget {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                    child: Consumer<WishlistProvider>(
+                      builder: (context, wishlistProvider, _) {
+                        final isWishlisted = wishlistProvider.isWishlisted(
+                          product,
+                        );
+                        return GestureDetector(
+                          onTap: () => wishlistProvider.toggleWishlist(product),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardBackground,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              isWishlisted
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                              color: isWishlisted
+                                  ? AppColors.error
+                                  : AppColors.textSecondary,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border_rounded,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ],
