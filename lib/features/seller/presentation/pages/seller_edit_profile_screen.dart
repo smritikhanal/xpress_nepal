@@ -126,7 +126,7 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
         backgroundColor: AppColors.sellerPrimaryDark,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Edit Profile'),
+        title: const Text('Settings'),
         actions: [
           if (_hasChanges)
             TextButton(
