@@ -6,12 +6,23 @@ class ApiConstants {
   // Private constructor to prevent instantiation
   ApiConstants._();
 
-  // Base URL - determined by platform
+  // Optional compile-time override for any environment.
+  // Example: --dart-define=API_BASE_URL=http://192.168.1.10:5000
+  static const String _apiBaseUrlOverride = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+
+  // Base URL - determined by override/platform
   // For Web: localhost
   // For Android emulator: 10.0.2.2
   // For iOS simulator: localhost
   // For real device: your computer's IP address
   static String get baseUrl {
+    if (_apiBaseUrlOverride.isNotEmpty) {
+      return _apiBaseUrlOverride;
+    }
+
     if (kIsWeb) {
       return 'http://localhost:5000';
     }
