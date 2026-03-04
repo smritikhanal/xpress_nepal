@@ -7,33 +7,72 @@ import 'package:xpress_nepal/features/product/presentation/pages/customer_produc
 import 'package:xpress_nepal/core/utils/image_helper.dart';
 
 class WishlistScreen extends StatelessWidget {
-  final List<ProductEntity> wishlistItems;
-  const WishlistScreen({Key? key, required this.wishlistItems})
-    : super(key: key);
+  final List<ProductEntity>? wishlistItems;
+  const WishlistScreen({super.key, this.wishlistItems});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Wishlist')),
-      body: wishlistItems.isEmpty
-          ? const Center(child: Text('Your wishlist is empty.'))
-          : ListView.builder(
-              itemCount: wishlistItems.length,
-              itemBuilder: (context, index) {
-                final item = wishlistItems[index];
-                return ListTile(
-                  leading: item.images.isNotEmpty
-                      ? Image.network(
-                          ImageHelper.fixImageUrl(item.images.first),
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.image_not_supported),
-                  title: Text(item.title),
-                  subtitle: Text(item.brand ?? ''),
+      body: Consumer<WishlistProvider>(
+        builder: (context, provider, _) {
+          final items = provider.wishlist.isNotEmpty
+              ? provider.wishlist
+              : (wishlistItems ?? const <ProductEntity>[]);
+
+          if (provider.loading && items.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (items.isEmpty) {
+            return const Center(child: Text('Your wishlist is empty.'));
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(12),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return Card(
+                child: ListTile(
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: item.images.isNotEmpty
+                        ? Image.network(
+                            ImageHelper.fixImageUrl(item.images.first),
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 56,
+                              height: 56,
+                              color: Colors.grey.shade200,
+                              child: const Icon(Icons.image_not_supported),
+                            ),
+                          )
+                        : Container(
+                            width: 56,
+                            height: 56,
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.image_not_supported),
+                          ),
+                  ),
+                  title: Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    (item.brand?.trim().isNotEmpty ?? false)
+                        ? item.brand!
+                        : 'No brand',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
+                    color: Colors.redAccent,
                     onPressed: () {
                       Provider.of<WishlistProvider>(
                         context,
@@ -52,9 +91,12 @@ class WishlistScreen extends StatelessWidget {
                       ),
                     );
                   },
-                );
-              },
-            ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

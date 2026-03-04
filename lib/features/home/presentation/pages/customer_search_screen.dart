@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/features/category/presentation/providers/category_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/customer_product_detail_screen.dart';
 import 'package:xpress_nepal/core/utils/image_helper.dart';
 
 class CustomerSearchScreen extends StatefulWidget {
-  const CustomerSearchScreen({Key? key}) : super(key: key);
+  const CustomerSearchScreen({super.key});
 
   @override
   State<CustomerSearchScreen> createState() => _CustomerSearchScreenState();
@@ -16,10 +17,13 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   final _productViewModel = ProductProvider.instance.productViewModel;
+  final _categoryViewModel = CategoryProvider.instance.categoryViewModel;
   final _focusNode = FocusNode();
 
   String _sortBy = 'newest';
   bool _hasSearched = false;
+  String? _selectedCategoryId;
+  String? _selectedCategoryName;
 
   final List<String> _recentSearches = [
     'Electronics',
@@ -41,6 +45,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _categoryViewModel.loadCategories();
     // Auto-focus search field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -49,7 +54,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
   void _onScroll() {
     if (_isBottom && !_productViewModel.state.hasReachedMax) {
-      _performSearch();
+      _performSearch(refresh: false);
     }
   }
 
@@ -61,25 +66,77 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   }
 
   void _performSearch({bool refresh = true}) {
-    if (_searchController.text.isEmpty) return;
+    final query = _searchController.text.trim();
+    final effectiveCategoryId = _selectedCategoryId;
+    final isCategorySearch =
+        effectiveCategoryId != null && effectiveCategoryId.isNotEmpty;
+
+    if (query.isEmpty && !isCategorySearch) return;
 
     setState(() {
       _hasSearched = true;
     });
 
     _productViewModel.loadProducts(
-      search: _searchController.text,
+      categoryId: isCategorySearch ? effectiveCategoryId : null,
+      search: isCategorySearch ? null : query,
       sort: _sortBy,
       refresh: refresh,
     );
+  }
+
+  void _searchByCategoryName(String categoryName) {
+    final trimmed = categoryName.trim();
+    final categories = _categoryViewModel.categories;
+
+    String? categoryId;
+
+    for (final category in categories) {
+      if (category.name.toLowerCase() == trimmed.toLowerCase()) {
+        categoryId = category.id;
+        break;
+      }
+    }
+
+    if (categoryId == null) {
+      for (final category in categories) {
+        if (category.name.toLowerCase().contains(trimmed.toLowerCase())) {
+          categoryId = category.id;
+          break;
+        }
+      }
+    }
+
+    setState(() {
+      _searchController.text = trimmed;
+      _selectedCategoryId = categoryId;
+      _selectedCategoryName = categoryId != null ? trimmed : null;
+      _hasSearched = true;
+    });
+
+    _performSearch(refresh: true);
   }
 
   void _clearSearch() {
     _searchController.clear();
     setState(() {
       _hasSearched = false;
+      _selectedCategoryId = null;
+      _selectedCategoryName = null;
     });
     _focusNode.requestFocus();
+  }
+
+  void _clearRecentSearches() {
+    if (_recentSearches.isEmpty) return;
+
+    setState(() {
+      _recentSearches.clear();
+    });
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Recent searches cleared')));
   }
 
   @override
@@ -177,7 +234,18 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               ),
             ),
             textInputAction: TextInputAction.search,
-            onChanged: (_) => setState(() {}),
+            onChanged: (value) {
+              if (_selectedCategoryId != null &&
+                  value.trim().toLowerCase() !=
+                      (_selectedCategoryName ?? '').toLowerCase()) {
+                setState(() {
+                  _selectedCategoryId = null;
+                  _selectedCategoryName = null;
+                });
+              } else {
+                setState(() {});
+              }
+            },
             onSubmitted: (_) => _performSearch(),
           ),
 
@@ -246,9 +314,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 TextButton(
-                  onPressed: () {
-                    // Clear recent searches
-                  },
+                  onPressed: _clearRecentSearches,
                   child: const Text('Clear All'),
                 ),
               ],
@@ -260,6 +326,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               children: _recentSearches.map((search) {
                 return GestureDetector(
                   onTap: () {
+                    setState(() {
+                      _selectedCategoryId = null;
+                      _selectedCategoryName = null;
+                    });
                     _searchController.text = search;
                     _performSearch();
                   },
@@ -318,8 +388,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
               final category = _popularCategories[index];
               return GestureDetector(
                 onTap: () {
-                  _searchController.text = category['name'];
-                  _performSearch();
+                  _searchByCategoryName(category['name'] as String);
                 },
                 child: Container(
                   decoration: BoxDecoration(
@@ -412,6 +481,10 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                 color: index < 3 ? AppColors.success : AppColors.textHint,
               ),
               onTap: () {
+                setState(() {
+                  _selectedCategoryId = null;
+                  _selectedCategoryName = null;
+                });
                 _searchController.text = trendingItems[index];
                 _performSearch();
               },
