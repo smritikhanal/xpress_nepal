@@ -7,7 +7,6 @@ interface ICartItem {
   productId: Types.ObjectId;
   quantity: number;
   priceAtTime: number; // Price when added to cart
-  attributes?: Map<string, string> | Record<string, string>;
 }
 
 /**
@@ -37,11 +36,6 @@ const cartItemSchema = new Schema<ICartItem>(
       required: true,
       min: 0,
     },
-    attributes: {
-      type: Map,
-      of: String,
-      default: {},
-    },
   },
   { _id: false }
 );
@@ -61,6 +55,6 @@ const cartSchema = new Schema<ICart>(
   }
 );
 
-const Cart = mongoose.model<ICart>('Cart', cartSchema);
+const Cart = mongoose.models.Cart || mongoose.model<ICart>('Cart', cartSchema);
 
 export default Cart;

@@ -8,7 +8,6 @@ interface IOrderItem {
   title: string;
   quantity: number;
   price: number;
-  attributes?: Map<string, string> | Record<string, string>;
 }
 
 /**
@@ -83,11 +82,6 @@ const orderItemSchema = new Schema<IOrderItem>(
       type: Number,
       required: true,
       min: 0,
-    },
-    attributes: {
-      type: Map,
-      of: String,
-      default: {},
     },
   },
   { _id: false }
@@ -190,6 +184,6 @@ orderSchema.index({ userId: 1 });
 orderSchema.index({ orderStatus: 1 });
 orderSchema.index({ createdAt: -1 });
 
-const Order = mongoose.model<IOrder>('Order', orderSchema);
+const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', orderSchema);
 
 export default Order;

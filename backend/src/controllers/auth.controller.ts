@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import User, { IUser } from '../models/User.js';
 import { hashPassword, comparePassword, generateToken } from '../utils/auth.js';
 import { CreateUserDTO, LoginUserDTO } from '../dtos/user.dtos.js';
+import { sendPasswordResetEmail } from '../utils/email.js';
 import mongoose from 'mongoose';
-import { createNotification } from './notification.controller.js';
 
 export const register = async (
   req: Request,
@@ -72,6 +73,7 @@ export const register = async (
       phone: user.phone,
       isVerified: user.isVerified,
       authProvider: user.authProvider,
+      image: user.image,
       createdAt: user.createdAt,
     };
 
@@ -131,6 +133,7 @@ export const login = async (
         success: false,
         message: `Please login using ${user.authProvider}`,
       });
+      
     }
 
     const isMatch = await comparePassword(password, user.passwordHash);
@@ -143,14 +146,6 @@ export const login = async (
 
     const token = generateToken(user._id.toString(), user.role);
 
-    // Notify user of login
-    await createNotification(
-      user._id.toString(),
-      'Welcome Back',
-      'You have successfully logged in.',
-      'general'
-    );
-
     const userResponse: any = {
       id: user._id,
       name: user.name,
@@ -159,6 +154,7 @@ export const login = async (
       phone: user.phone,
       isVerified: user.isVerified,
       authProvider: user.authProvider,
+      image: user.image,
       createdAt: user.createdAt,
     };
     if (user.role === 'seller') {
@@ -176,6 +172,7 @@ export const login = async (
     });
   } catch (error) {
     console.error('Login error:', error);
+    
     return res.status(500).json({
       success: false,
       message: 'Server error during login',
@@ -205,6 +202,7 @@ export const getMe = async (
       phone: user.phone,
       isVerified: user.isVerified,
       authProvider: user.authProvider,
+      image: user.image,
       createdAt: user.createdAt,
     };
 
@@ -300,6 +298,207 @@ export const updateProfile = async (
     return res.status(500).json({
       success: false,
       message: 'Server error during profile update',
+    });
+  }
+};
+
+/**
+ * Forgot Password - Send reset email
+ * @route POST /api/auth/forgot-password
+ * @access Public
+ */
+export const forgotPassword = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists with this email, a password reset link has been sent.',
+      });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Set reset token and expiry (1 hour)
+    user.resetPasswordToken = resetTokenHash;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    // Determine frontend URL from Origin header, request body, or env fallback
+    const frontendUrl =
+      (req.headers.origin as string | undefined) ||
+      (req.body.redirectUrl as string | undefined) ||
+      process.env.FRONTEND_URL ||
+      'http://localhost:3000';
+
+    // Send reset email
+    try {
+      await sendPasswordResetEmail(user.email, resetToken, frontendUrl);
+      console.log(`Password reset email sent successfully to: ${user.email}`);
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      console.error('Email config:', {
+        user: process.env.USER_EMAIL,
+        hasKey: !!process.env.USER_EMAIL_KEY,
+        appName: process.env.USER_EMAIL_APP_NAME
+      });
+      // Don't fail the request if email fails, token is already saved
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'If an account exists with this email, a password reset link has been sent.',
+    });
+  } catch (error) {
+    console.error('ForgotPassword error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during password reset request',
+    });
+  }
+};
+
+/**
+ * Reset Password - Update password with token
+ * @route POST /api/auth/reset-password
+ * @access Public
+ */
+export const resetPassword = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required',
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters',
+      });
+    }
+
+    // Hash the token to compare with stored hash
+    const resetTokenHash = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: resetTokenHash,
+      resetPasswordExpires: { $gt: Date.now() },
+    }).select('+resetPasswordToken +resetPasswordExpires');
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token',
+      });
+    }
+
+    // Update password
+    user.passwordHash = await hashPassword(password);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successful. You can now login with your new password.',
+    });
+  } catch (error) {
+    console.error('ResetPassword error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during password reset',
+    });
+  }
+};
+
+/**
+ * @desc    Change password (authenticated)
+ * @route   POST /api/auth/change-password
+ * @access  Private
+ */
+export const changePassword = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters',
+      });
+    }
+
+    const user = await User.findById(req.user?.id).select('+passwordHash');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.authProvider !== 'local') {
+      return res.status(400).json({
+        success: false,
+        message: `You signed in with ${user.authProvider}. Password change is not available.`,
+      });
+    }
+
+    const isMatch = await comparePassword(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect',
+      });
+    }
+
+    user.passwordHash = await hashPassword(newPassword);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password changed successfully',
+    });
+  } catch (error) {
+    console.error('ChangePassword error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during password change',
     });
   }
 };

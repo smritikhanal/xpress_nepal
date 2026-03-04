@@ -1,15 +1,13 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-/**
- * Notification Interface
- */
 export interface INotification extends Document {
-  userId: Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   title: string;
   message: string;
-  type: 'order_status' | 'order_shipped' | 'order_delivered' | 'general';
-  orderId?: Types.ObjectId;
+  type: 'info' | 'success' | 'warning' | 'error' | 'order_placed' | 'order_confirmed' | 'order_shipped' | 'order_delivered' | 'order_cancelled' | 'order_status';
   isRead: boolean;
+  link?: string;
+  relatedId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,7 +18,6 @@ const notificationSchema = new Schema<INotification>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     title: {
       type: String,
@@ -32,26 +29,24 @@ const notificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['order_status', 'order_shipped', 'order_delivered', 'general'],
-      default: 'general',
-    },
-    orderId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Order',
+      enum: ['info', 'success', 'warning', 'error', 'order_placed', 'order_confirmed', 'order_shipped', 'order_delivered', 'order_cancelled', 'order_status'],
+      default: 'info',
     },
     isRead: {
       type: Boolean,
       default: false,
-      index: true,
+    },
+    link: {
+      type: String,
+    },
+    relatedId: {
+      type: String,
     },
   },
   {
     timestamps: true,
   }
 );
-
-// Index for efficient queries
-notificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
 
 const Notification = mongoose.model<INotification>('Notification', notificationSchema);
 

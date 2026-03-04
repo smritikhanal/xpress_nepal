@@ -31,6 +31,6 @@ const wishlistSchema = new Schema<IWishlist>(
   }
 );
 
-const Wishlist = mongoose.model<IWishlist>('Wishlist', wishlistSchema);
+const Wishlist = mongoose.models.Wishlist || mongoose.model<IWishlist>('Wishlist', wishlistSchema);
 
 export default Wishlist;

@@ -53,6 +53,6 @@ const messageSchema = new Schema<IMessage>(
 messageSchema.index({ receiverId: 1, isRead: 1 });
 messageSchema.index({ senderId: 1 });
 
-const Message = mongoose.model<IMessage>('Message', messageSchema);
+const Message = mongoose.models.Message || mongoose.model<IMessage>('Message', messageSchema);
 
 export default Message;

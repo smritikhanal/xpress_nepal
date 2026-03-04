@@ -12,7 +12,7 @@ export const addAddressSchema = z.object({
     state: z.string().min(2, 'State is required'),
     city: z.string().min(2, 'City is required'),
     street: z.string().min(5, 'Street address is required'),
-    postalCode: z.string().min(4, 'Postal code must be at least 4 characters').optional(),
+    postalCode: z.string().min(4, 'Postal code is required'),
     isDefault: z.boolean().optional(),
   }),
 });

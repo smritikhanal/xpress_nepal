@@ -8,19 +8,41 @@ import { ApiError, sendResponse } from '../utils/apiHelpers.js';
  */
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const { role } = req.query;
-    
-    // Build query based on role filter
+    const { role, page = 1, limit = 10, search } = req.query;
+
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build query based on filters
     const query: any = {};
     if (role && ['customer', 'seller', 'superadmin'].includes(role as string)) {
       query.role = role;
     }
 
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const total = await User.countDocuments(query);
     const users = await User.find(query)
       .select('-passwordHash')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
 
-    sendResponse(res, 200, users, 'Users fetched successfully');
+    sendResponse(res, 200, {
+      users,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+      },
+    }, 'Users fetched successfully');
   } catch (error: any) {
     throw new ApiError(error.message, 500);
   }

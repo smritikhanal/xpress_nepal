@@ -26,7 +26,7 @@ export const getCart = asyncHandler(async (req: Request, res: Response) => {
  * @access  Private
  */
 export const addToCart = asyncHandler(async (req: Request, res: Response) => {
-  const { productId, quantity = 1, attributes } = req.body;
+  const { productId, quantity = 1 } = req.body;
 
   if (!productId) {
     throw new ApiError('Product ID is required', 400);
@@ -46,27 +46,9 @@ export const addToCart = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError('Insufficient stock', 400);
   }
 
-  // Calculate price with attributes
-  let finalPrice = product.discountPrice || product.price;
-
-  // Validate and calculate attribute price modifiers
-  if (attributes) {
-    for (const [key, value] of Object.entries(attributes)) {
-      // Check if attribute exists in product
-      const attributeOptions = (product.attributes as any)?.[key];
-      if (!attributeOptions) continue;
-
-      // Find selected option
-      const selectedOption = attributeOptions.find((opt: any) => opt.value === value);
-      if (selectedOption) {
-        finalPrice += selectedOption.priceModifier || 0;
-      }
-    }
-  }
-
   // Find or create cart
   let cart = await Cart.findOne({ userId: req.user?.id });
-
+  
   if (!cart) {
     cart = await Cart.create({
       userId: req.user?.id,
@@ -74,45 +56,21 @@ export const addToCart = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Helper to compare attributes maps
-  const areAttributesEqual = (attr1: Map<string, string> | undefined, attr2: Record<string, string> | undefined) => {
-    if (!attr1 && !attr2) return true;
-    if (!attr1 || !attr2) return false;
-
-    // Convert Mongoose Map to Object if needed, or iterate
-    const keys1 = attr1 instanceof Map ? Array.from(attr1.keys()) : Object.keys(attr1);
-    const keys2 = Object.keys(attr2);
-
-    if (keys1.length !== keys2.length) return false;
-
-    for (const key of keys1) {
-      const val1 = attr1 instanceof Map ? attr1.get(key) : (attr1 as any)[key];
-      const val2 = attr2[key];
-      if (val1 !== val2) return false;
-    }
-    return true;
-  };
-
-  // Check if product with SAME attributes already in cart
+  // Check if product already in cart
   const existingItemIndex = cart.items.findIndex(
-    (item) =>
-      item.productId.toString() === productId &&
-      areAttributesEqual(item.attributes as any, attributes)
+    (item) => item.productId.toString() === productId
   );
 
   if (existingItemIndex > -1) {
     // Update quantity
     cart.items[existingItemIndex].quantity += quantity;
-    // Update price to current calculation (optional, usage decision)
-    cart.items[existingItemIndex].priceAtTime = finalPrice;
   } else {
-    // Add new item 
+    // Add new item with current price snapshot
     cart.items.push({
       productId,
       quantity,
-      priceAtTime: finalPrice,
-      attributes: attributes || {},
-    } as any);
+      priceAtTime: product.price,
+    });
   }
 
   await cart.save();
@@ -137,7 +95,7 @@ export const updateCartItem = asyncHandler(async (req: Request, res: Response) =
   }
 
   const cart = await Cart.findOne({ userId: req.user?.id });
-
+  
   if (!cart) {
     throw new ApiError('Cart not found', 404);
   }
@@ -179,7 +137,7 @@ export const removeFromCart = asyncHandler(async (req: Request, res: Response) =
   const { productId } = req.params;
 
   const cart = await Cart.findOne({ userId: req.user?.id });
-
+  
   if (!cart) {
     throw new ApiError('Cart not found', 404);
   }
@@ -203,7 +161,7 @@ export const removeFromCart = asyncHandler(async (req: Request, res: Response) =
  */
 export const clearCart = asyncHandler(async (req: Request, res: Response) => {
   const cart = await Cart.findOne({ userId: req.user?.id });
-
+  
   if (cart) {
     cart.items = [];
     await cart.save();

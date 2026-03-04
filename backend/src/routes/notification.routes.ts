@@ -1,15 +1,15 @@
 import { Router } from 'express';
-import {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
+import { 
+  getNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  deleteNotification 
 } from '../controllers/notification.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// All routes require authentication
+// Protect all routes
 router.use(protect);
 
 router.get('/', getNotifications);

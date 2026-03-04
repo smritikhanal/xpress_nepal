@@ -48,6 +48,7 @@ export const getInbox = async (req: Request, res: Response) => {
 
     const messages = await Message.find(query)
       .populate('senderId', 'name email shopName')
+      .populate('receiverId', 'name email shopName')
       .populate('productId', 'title slug')
       .sort({ createdAt: -1 });
 
@@ -70,6 +71,7 @@ export const getSentMessages = async (req: Request, res: Response) => {
     const userId = req.user.id;
 
     const messages = await Message.find({ senderId: userId })
+      .populate('senderId', 'name email shopName')
       .populate('receiverId', 'name email shopName')
       .populate('productId', 'title slug')
       .sort({ createdAt: -1 });
@@ -141,6 +143,24 @@ export const getUnreadCount = async (req: Request, res: Response) => {
     });
 
     sendResponse(res, 200, { count }, 'Unread count retrieved successfully');
+  } catch (error: any) {
+    throw new ApiError(error.message, 500);
+  }
+};
+
+/**
+ * Mark all inbox messages as read
+ */
+export const markAllAsRead = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await Message.updateMany(
+      { receiverId: userId, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    sendResponse(res, 200, { modifiedCount: result.modifiedCount }, 'All messages marked as read');
   } catch (error: any) {
     throw new ApiError(error.message, 500);
   }

@@ -4,6 +4,7 @@ import {
   getInbox,
   getSentMessages,
   markAsRead,
+  markAllAsRead,
   deleteMessage,
   getUnreadCount,
 } from '../controllers/message.controller.js';
@@ -19,6 +20,7 @@ const router = Router();
  * GET    /api/messages/sent     - Get sent messages
  * GET    /api/messages/unread   - Get unread count
  * PATCH  /api/messages/:id/read - Mark message as read
+ * PATCH  /api/messages/read-all - Mark all messages as read
  * DELETE /api/messages/:id      - Delete message
  */
 
@@ -29,7 +31,8 @@ router.post('/', sendMessage);
 router.get('/inbox', getInbox);
 router.get('/sent', getSentMessages);
 router.get('/unread', getUnreadCount);
-router.patch('/:id/read', markAsRead);
+router.put('/read-all', markAllAsRead);
+router.put('/:id/read', markAsRead);
 router.delete('/:id', deleteMessage);
 
 export default router;

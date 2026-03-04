@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Wishlist from '../models/Wishlist.js';
 import { asyncHandler, sendResponse, ApiError } from '../utils/apiHelpers.js';
-import { createNotification } from './notification.controller.js';
 
 /**
  * @desc    Get user's wishlist
@@ -40,14 +39,6 @@ export const addToWishlist = asyncHandler(async (req: Request, res: Response) =>
   if (!wishlist.products.includes(productId)) {
     wishlist.products.push(productId);
     await wishlist.save();
-
-    // Notify user
-    await createNotification(
-      req.user!.id,
-      'Wishlist Update',
-      'Item added to your wishlist.',
-      'general'
-    );
   }
 
   const populated = await Wishlist.findById(wishlist._id)
