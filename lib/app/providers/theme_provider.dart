@@ -10,8 +10,8 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _themePreferenceKey = 'theme_preference_mode';
   static const String _legacyIsDarkModeKey = 'isDarkMode';
 
-  ThemeMode _themeMode = ThemeMode.system;
-  AppThemePreference _preference = AppThemePreference.followSystem;
+  ThemeMode _themeMode = ThemeMode.light;
+  AppThemePreference _preference = AppThemePreference.manualLight;
   bool _isInitialized = false;
   DateTime? _nextAutoRefreshAt;
   Timer? _autoModeTimer;
@@ -44,13 +44,14 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
             ? AppThemePreference.manualDark
             : AppThemePreference.manualLight;
       } else {
-        _preference = AppThemePreference.followSystem;
+        // Default to light mode for new users
+        _preference = AppThemePreference.manualLight;
       }
       await prefs.setString(_themePreferenceKey, _preference.name);
     } else {
       _preference = AppThemePreference.values.firstWhere(
         (value) => value.name == storedPreference,
-        orElse: () => AppThemePreference.followSystem,
+        orElse: () => AppThemePreference.manualLight,
       );
     }
 
