@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/core/api/api_endpoints.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 
 class CustomerEditProfileScreen extends StatefulWidget {
@@ -13,6 +17,7 @@ class CustomerEditProfileScreen extends StatefulWidget {
 class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _authViewModel = AuthProvider.instance.authViewModel;
+  final _imagePicker = ImagePicker();
 
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
@@ -20,6 +25,7 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
 
   bool _isLoading = false;
   bool _hasChanges = false;
+  File? _selectedImage;
 
   @override
   void initState() {
@@ -47,10 +53,38 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
     final hasChanges =
         _nameController.text != (user?.name ?? '') ||
         _emailController.text != (user?.email ?? '') ||
-        _phoneController.text != (user?.phone ?? '');
+        _phoneController.text != (user?.phone ?? '') ||
+        _selectedImage != null;
 
     if (hasChanges != _hasChanges) {
       setState(() => _hasChanges = hasChanges);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+          _hasChanges = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -60,17 +94,30 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement API call to update profile
-      await Future.delayed(const Duration(seconds: 1)); // Simulated delay
+      final success = await _authViewModel.updateProfile(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        image: _selectedImage?.path,
+      );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context, true);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile updated successfully!')),
+          );
+          Navigator.pop(context, true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _authViewModel.errorMessage ?? 'Failed to update profile',
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -157,31 +204,37 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
+                        child: ClipOval(
+                          child: _selectedImage != null
+                              ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                              : user?.image != null
+                              ? Image.network(
+                                  '${ApiEndpoints.baseUrl.replaceAll('/api', '')}/${user!.image}',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return _buildInitialsAvatar(initials);
+                                  },
+                                )
+                              : _buildInitialsAvatar(initials),
                         ),
                       ),
                       Positioned(
                         right: 0,
                         bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryDark,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt_rounded,
-                            size: 18,
-                            color: Colors.white,
+                        child: GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryDark,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -189,14 +242,7 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () {
-                      // TODO: Implement image picker
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Photo upload coming soon!'),
-                        ),
-                      );
-                    },
+                    onPressed: _pickImage,
                     child: const Text(
                       'Change Photo',
                       style: TextStyle(
@@ -489,6 +535,19 @@ class _CustomerEditProfileScreenState extends State<CustomerEditProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInitialsAvatar(String initials) {
+    return Center(
+      child: Text(
+        initials,
+        style: const TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
       ),
     );
   }

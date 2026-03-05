@@ -11,6 +11,7 @@ import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provi
 import 'package:provider/provider.dart';
 import 'package:xpress_nepal/core/api/api_client.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/change_password_screen.dart';
+import 'package:xpress_nepal/features/notification/presentation/pages/notification_page.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({Key? key}) : super(key: key);
@@ -220,6 +221,113 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _showHelpSupportSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Help & Support',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.email_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+                title: const Text('Email Support'),
+                subtitle: const Text('support@xpressnepal.com'),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.phone_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+                title: const Text('Phone Support'),
+                subtitle: const Text('+977-1-4XXXXXX'),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.schedule_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+                title: const Text('Support Hours'),
+                subtitle: const Text('Sun – Fri, 9:00 AM – 6:00 PM'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAboutDialog() async {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Xpress Nepal',
+      applicationVersion: 'v1.0.0',
+      applicationIcon: Padding(
+        padding: const EdgeInsets.all(4),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            'assets/images/logo/app_logo.png',
+            width: 48,
+            height: 48,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.shopping_bag_rounded,
+              size: 48,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+      applicationLegalese: '© 2025 Xpress Nepal. All rights reserved.',
+      children: const [
+        SizedBox(height: 12),
+        Text(
+          'Fast, reliable online shopping delivered to your doorstep anywhere in Nepal.',
+        ),
+      ],
+    );
+  }
+
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -367,6 +475,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         },
                       ),
                       _ProfileMenuItem(
+                        icon: Icons.notifications_outlined,
+                        title: 'Notifications',
+                        subtitle: 'View your notifications',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      _ProfileMenuItem(
                         icon: Icons.palette_outlined,
                         title: 'Theme',
                         subtitle: themeSubtitle,
@@ -391,6 +512,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                             ),
                           );
                         },
+                      ),
+                      const SizedBox(height: 8),
+                      Divider(color: AppColors.borderLight),
+                      const SizedBox(height: 8),
+                      _ProfileMenuItem(
+                        icon: Icons.help_outline_rounded,
+                        title: 'Help & Support',
+                        subtitle: 'Get help or contact us',
+                        onTap: _showHelpSupportSheet,
                       ),
                       const SizedBox(height: 8),
                       Divider(color: AppColors.borderLight),

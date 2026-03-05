@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
@@ -22,6 +20,9 @@ import 'package:xpress_nepal/features/home/presentation/pages/customer_search_sc
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import '../../../../features/cart/cart.dart';
 import '../../../../features/cart/presentation/provider/cart_provider.dart';
+import '../../../../features/messages/presentation/pages/messages_page.dart';
+import '../../../../features/messages/presentation/providers/message_provider.dart';
+import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -34,10 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   bool _isRefreshingHomeContent = false;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
-  DateTime _lastShakeTime = DateTime.fromMillisecondsSinceEpoch(0);
-
-  static const double _shakeThreshold = 12.0;
-  static const Duration _shakeDebounce = Duration(seconds: 2);
 
   @override
   void initState() {
@@ -60,38 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
-  void _startShakeDetection() {
-    try {
-      _accelerometerSubscription = accelerometerEvents.listen(
-        (event) {
-          if (_selectedIndex != 0 || _isRefreshingHomeContent) return;
-
-          final acceleration = sqrt(
-            event.x * event.x + event.y * event.y + event.z * event.z,
-          );
-
-          final now = DateTime.now();
-          final isDebounced = now.difference(_lastShakeTime) < _shakeDebounce;
-
-          if (acceleration > _shakeThreshold && !isDebounced) {
-            _lastShakeTime = now;
-            unawaited(_refreshHomeContent(triggeredByShake: true));
-          }
-        },
-        onError: (Object error, StackTrace stackTrace) {
-          if (error is MissingPluginException || error is PlatformException) {
-            _accelerometerSubscription?.cancel();
-            _accelerometerSubscription = null;
-          }
-        },
-      );
-    } on MissingPluginException {
-      _accelerometerSubscription = null;
-    } on PlatformException {
-      _accelerometerSubscription = null;
-    }
-  }
-
   Future<void> _refreshHomeContent({bool triggeredByShake = false}) async {
     if (_selectedIndex != 0 || _isRefreshingHomeContent) return;
 
@@ -111,33 +76,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final refreshMessage = homeContentProvider.isOfflineMode
           ? (triggeredByShake
-                ? 'Home page refreshed from offline cache (shake)'
-                : 'Home page refreshed (offline mode)')
-          : (triggeredByShake
-                ? 'Home page refreshed via shake'
-                : 'Home page refreshed');
+                ? 'Refreshed (offline cache)'
+                : 'Refreshed (offline)')
+          : (triggeredByShake ? 'Refreshed via shake' : 'Page refreshed');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(refreshMessage),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      _showRefreshToast(refreshMessage);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to refresh home content right now'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showRefreshToast('Unable to refresh right now', isError: true);
     } finally {
       if (!mounted) return;
       setState(() {
         _isRefreshingHomeContent = false;
       });
     }
+  }
+
+  void _showRefreshToast(String message, {bool isError = false}) {
+    if (!mounted) return;
+    final screenWidth = MediaQuery.of(context).size.width;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: Colors.white,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: isError ? AppColors.error : AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            left: screenWidth * 0.45,
+            bottom: 16,
+            right: 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   @override
@@ -150,12 +145,173 @@ class _HomeScreenState extends State<HomeScreen> {
           ? HomeAppBar(onSearchTap: () => setState(() => _selectedIndex = 1))
           : null,
       body: _buildBody(),
-      bottomNavigationBar: HomeBottomNav(
-        selectedIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        isTablet: isTablet,
-        cartItemCount: CartProvider.instance.state.items.length,
+      bottomNavigationBar: ListenableBuilder(
+        listenable: MessageProvider.instance.viewModel,
+        builder: (context, _) => HomeBottomNav(
+          selectedIndex: _selectedIndex,
+          onTap: (index) => setState(() => _selectedIndex = index),
+          isTablet: isTablet,
+          cartItemCount: CartProvider.instance.state.items.length,
+          unreadMessageCount: MessageProvider.instance.viewModel.unreadCount,
+        ),
       ),
+    );
+  }
+
+  Widget _buildWelcomeBanner() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final String greeting;
+    final IconData greetingIcon;
+    if (hour < 12) {
+      greeting = 'Good Morning';
+      greetingIcon = Icons.wb_sunny_rounded;
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+      greetingIcon = Icons.light_mode_rounded;
+    } else {
+      greeting = 'Good Evening';
+      greetingIcon = Icons.nights_stay_rounded;
+    }
+
+    return ListenableBuilder(
+      listenable: AuthProvider.instance.authViewModel,
+      builder: (context, _) {
+        final user = AuthProvider.instance.authViewModel.state.user;
+        final firstName = user?.name.split(' ').first ?? 'there';
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isTablet = screenWidth >= 650;
+
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: isTablet ? 20 : 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 24 : 20,
+            vertical: isTablet ? 20 : 18,
+          ),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF6B35), Color(0xFFFF9A5C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Background decorative circles
+              Positioned(
+                right: -18,
+                top: -18,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.10),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 20,
+                bottom: -24,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.07),
+                  ),
+                ),
+              ),
+              // Content
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Greeting row
+                        Row(
+                          children: [
+                            Icon(
+                              greetingIcon,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              greeting,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: isTablet ? 13 : 12,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        // Name
+                        Text(
+                          'Welcome, $firstName! 👋',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isTablet ? 22 : 20,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Tagline
+                        Text(
+                          'Discover the best deals today ✨',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: isTablet ? 13 : 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Avatar
+                  Container(
+                    width: isTablet ? 56 : 48,
+                    height: isTablet ? 56 : 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isTablet ? 22 : 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -168,6 +324,8 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return const CartPage();
       case 3:
+        return const MessagesPage();
+      case 4:
         return const CustomerProfileScreen();
       default:
         return _buildHomeContent();
@@ -187,7 +345,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             if (_isRefreshingHomeContent || providerLoading)
               const LinearProgressIndicator(minHeight: 2),
-            SizedBox(height: 8),
+            const SizedBox(height: 4),
+            // Welcome Banner
+            _buildWelcomeBanner(),
+            const SizedBox(height: 16),
             // Promo Banner
             const PromoBanner(),
             SizedBox(height: 16),
@@ -212,8 +373,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const DealsOfTheDaySection(),
             SizedBox(height: 20),
 
-            // All Products Grid
-            const ProductGrid(),
+            // All Products Grid (limited preview – View All shows everything)
+            const ProductGrid(limit: 4),
             SizedBox(height: 20),
 
             // Top Sellers
