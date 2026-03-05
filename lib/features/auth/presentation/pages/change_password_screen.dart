@@ -26,18 +26,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     try {
       final apiClient = ApiClient();
       final response = await apiClient.post(
-        '/api/auth/change-password',
+        '/auth/change-password',
         data: {
-          'oldPassword': _oldPasswordController.text,
+          'currentPassword': _oldPasswordController.text,
           'newPassword': _newPasswordController.text,
         },
       );
       if (response.data['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password changed successfully!'),
-            backgroundColor: AppColors.success,
-          ),
+          const SnackBar(content: Text('Password changed successfully!')),
         );
         Navigator.pop(context);
       } else {
@@ -59,7 +56,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Change Password')),
+      appBar: AppBar(title: const Text('Security')),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(

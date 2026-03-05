@@ -5,6 +5,7 @@ import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/custom_text_field.dart';
 import 'package:xpress_nepal/features/home/presentation/pages/home_screen.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/register_screen.dart';
+import 'package:xpress_nepal/features/auth/presentation/pages/forgot_password_screen.dart';
 import 'package:xpress_nepal/features/seller/presentation/pages/seller_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -373,7 +374,13 @@ class _LoginScreenState extends State<LoginScreen>
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
                                     onPressed: () {
-                                      // TODO: Navigate to forgot password
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ForgotPasswordScreen(),
+                                        ),
+                                      );
                                     },
                                     style: TextButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(

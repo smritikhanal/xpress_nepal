@@ -118,6 +118,36 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update user profile (name, phone, image, shopName, businessDescription)
+  Future<bool> updateProfile({
+    required String name,
+    String? phone,
+    String? image,
+    String? shopName,
+    String? businessDescription,
+  }) async {
+    _state = AuthState.loading();
+    notifyListeners();
+
+    final result = await _authRepository.updateProfile(
+      name: name,
+      phone: phone,
+      image: image,
+      shopName: shopName,
+      businessDescription: businessDescription,
+    );
+
+    if (result.success && result.user != null) {
+      _state = AuthState.authenticated(result.user!);
+      notifyListeners();
+      return true;
+    } else {
+      _state = AuthState.error(result.message ?? 'Profile update failed');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Clear error state
   void clearError() {
     if (_state.status == AuthStatus.error) {
@@ -128,4 +158,29 @@ class AuthViewModel extends ChangeNotifier {
 
   /// Get error message
   String? get errorMessage => _state.errorMessage;
+
+  /// Send forgot password email
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _authRepository.forgotPassword(email: email);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  /// Reset password with token
+  Future<void> resetPassword(String token, String password) async {
+    try {
+      final success = await _authRepository.resetPassword(
+        token: token,
+        password: password,
+      );
+
+      if (!success) {
+        throw Exception('Failed to reset password');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
 }
