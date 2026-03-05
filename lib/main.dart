@@ -7,7 +7,6 @@ import 'package:xpress_nepal/features/product/presentation/providers/product_pro
 import 'package:xpress_nepal/features/notification/presentation/providers/notification_provider.dart';
 import 'package:xpress_nepal/features/messages/presentation/providers/message_provider.dart';
 import 'app/app.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_theme.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/login_screen.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/create_product_page.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/view_products_page.dart';
 import 'package:xpress_nepal/features/seller/presentation/pages/seller_edit_profile_screen.dart';
 import 'package:xpress_nepal/features/order/presentation/pages/seller/seller_orders_page.dart';
-import 'package:xpress_nepal/features/order/presentation/pages/seller/seller_orders_page.dart';
-import 'package:provider/provider.dart';
-import 'package:xpress_nepal/features/product/presentation/view_model/product_view_model.dart';
-import 'package:xpress_nepal/features/order/presentation/view_model/order_view_model.dart';
+import 'package:xpress_nepal/features/product/domain/entities/product_entity.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/order/presentation/providers/order_provider.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/change_password_screen.dart';
 import 'package:xpress_nepal/features/messages/presentation/pages/messages_page.dart';
+import 'package:xpress_nepal/features/messages/presentation/providers/message_provider.dart';
+import 'package:xpress_nepal/features/seller/presentation/pages/seller_all_reviews_screen.dart';
+import 'package:xpress_nepal/features/seller/presentation/pages/seller_shop_analytics_screen.dart';
 
 class SellerDashboardScreen extends StatefulWidget {
   const SellerDashboardScreen({Key? key}) : super(key: key);
@@ -26,12 +27,45 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
   final _authViewModel = AuthProvider.instance.authViewModel;
   int _selectedIndex = 0;
 
+  void _onAuthStateChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _authViewModel.addListener(_onAuthStateChange);
+    _loadDashboardData();
+  }
+
+  @override
+  void dispose() {
+    _authViewModel.removeListener(_onAuthStateChange);
+    super.dispose();
+  }
+
+  Future<void> _loadDashboardData() async {
+    final sellerId = _authViewModel.state.user?.id;
+    if (sellerId != null) {
+      await Future.wait([
+        ProductProvider.instance.productViewModel.loadProducts(
+          sellerId: sellerId,
+          refresh: true,
+        ),
+        OrderProvider.instance.getSellerOrders(refresh: true),
+      ]);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomNav(),
+    return Theme(
+      data: AppTheme.sellerTheme,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: _buildBody(),
+        bottomNavigationBar: _buildBottomNav(),
+      ),
     );
   }
 
@@ -75,12 +109,98 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
               _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
               _buildNavItem(1, Icons.inventory_2_rounded, 'Products'),
               _buildNavItem(2, Icons.shopping_bag_rounded, 'Orders'),
-              _buildNavItem(3, Icons.message_rounded, 'Messages'),
+              _buildMessagesNavItem(),
               _buildNavItem(4, Icons.person_rounded, 'Profile'),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMessagesNavItem() {
+    return ListenableBuilder(
+      listenable: MessageProvider.instance.viewModel,
+      builder: (context, _) {
+        final unread = MessageProvider.instance.viewModel.unreadCount;
+        final isSelected = _selectedIndex == 3;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedIndex = 3),
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(
+              horizontal: isSelected ? 16 : 12,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              gradient: isSelected ? AppColors.sellerGradient : null,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.sellerPrimary.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      Icons.message_rounded,
+                      size: 22,
+                      color: isSelected ? Colors.white : AppColors.textHint,
+                    ),
+                    if (unread > 0)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unread > 99 ? '99+' : '$unread',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (isSelected) ...[
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Messages',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -136,197 +256,260 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
 
   Widget _buildDashboard() {
     final user = _authViewModel.state.user;
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<ProductViewModel>.value(
-          value: ProductProvider.instance.productViewModel,
-        ),
-        ChangeNotifierProvider<OrderViewModel>.value(
-          value: OrderProvider.instance,
-        ),
-      ],
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: AppColors.sellerGradient,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.sellerPrimary.withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              (user?.name ?? 'S')[0].toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.sellerPrimary,
-                              ),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: AppColors.sellerGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.sellerPrimary.withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            (user?.name ?? 'S')[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.sellerPrimary,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome back,',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white.withOpacity(0.8),
-                                ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome back,',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.8),
                               ),
-                              Text(
-                                user?.name ?? 'Seller',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                            ),
+                            Text(
+                              user?.name ?? 'Seller',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Quick Stats
-              const Text(
-                'Overview',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Consumer<ProductViewModel>(
-                      builder: (context, productViewModel, _) {
-                        final sellerId = _authViewModel.state.user?.id;
-                        final products = sellerId == null
-                            ? []
-                            : productViewModel.state.products
-                                  .where((p) => p.sellerId == sellerId)
-                                  .toList();
-                        return _buildStatCard(
-                          'Products',
-                          products.length.toString(),
-                          Icons.inventory_2_rounded,
-                          AppColors.sellerPrimary,
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Consumer<OrderViewModel>(
-                      builder: (context, orderViewModel, _) {
-                        final orders = orderViewModel.state.sellerOrders;
-                        return _buildStatCard(
-                          'Orders',
-                          orders.length.toString(),
-                          Icons.shopping_bag_rounded,
-                          Colors.blue,
-                        );
-                      },
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Revenue',
-                      'Rs. 0',
-                      Icons.account_balance_wallet_rounded,
-                      Colors.purple,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Reviews',
-                      '0',
-                      Icons.star_rounded,
-                      Colors.amber,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+            ),
+            const SizedBox(height: 24),
 
-              // Quick Actions
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+            // Quick Stats
+            const Text(
+              'Overview',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      'Add Product',
-                      Icons.add_box_rounded,
-                      () {
-                        Navigator.push(
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: ProductProvider.instance.productViewModel,
+                    builder: (context, _) {
+                      final sellerId = _authViewModel.state.user?.id;
+                      final products = sellerId == null
+                          ? []
+                          : ProductProvider
+                                .instance
+                                .productViewModel
+                                .state
+                                .products
+                                .where((p) => p.sellerId == sellerId)
+                                .toList();
+                      return _buildStatCard(
+                        'Products',
+                        products.length.toString(),
+                        Icons.inventory_2_rounded,
+                        AppColors.sellerPrimary,
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const CreateProductPage(),
+                            builder: (_) => const ViewProductsPage(),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      'View Orders',
-                      Icons.list_alt_rounded,
-                      () => setState(() => _selectedIndex = 2),
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: OrderProvider.instance,
+                    builder: (context, _) {
+                      final orders = OrderProvider.instance.state.sellerOrders;
+                      return _buildStatCard(
+                        'Orders',
+                        orders.length.toString(),
+                        Icons.shopping_bag_rounded,
+                        Colors.blue,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SellerOrdersPage(),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: OrderProvider.instance,
+                    builder: (context, _) {
+                      final revenue = OrderProvider.instance.state.sellerOrders
+                          .fold<double>(0, (sum, o) => sum + o.totalAmount);
+                      return _buildStatCard(
+                        'Revenue',
+                        'Rs. ${revenue.toStringAsFixed(0)}',
+                        Icons.account_balance_wallet_rounded,
+                        Colors.purple,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SellerShopAnalyticsScreen(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: ProductProvider.instance.productViewModel,
+                    builder: (context, _) {
+                      final sellerId = _authViewModel.state.user?.id;
+                      final sellerProducts = sellerId == null
+                          ? <ProductEntity>[]
+                          : ProductProvider
+                                .instance
+                                .productViewModel
+                                .state
+                                .products
+                                .where((p) => p.sellerId == sellerId)
+                                .toList();
+                      final totalReviews = sellerProducts.fold<int>(
+                        0,
+                        (sum, p) => sum + p.ratingCount,
+                      );
+                      return _buildStatCard(
+                        'Reviews',
+                        totalReviews.toString(),
+                        Icons.star_rounded,
+                        Colors.amber,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SellerAllReviewsScreen(
+                              sellerId: _authViewModel.state.user?.id ?? '',
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Quick Actions
+            const Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuickActionCard(
+                    'Add Product',
+                    Icons.add_box_rounded,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateProductPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildQuickActionCard(
+                    'View Orders',
+                    Icons.list_alt_rounded,
+                    () => setState(() => _selectedIndex = 2),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Recent Reviews
+            const Text(
+              'Recent Reviews',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SellerReviewsSection(
+              sellerId: _authViewModel.state.user?.id ?? '',
+            ),
+          ],
         ),
       ),
     );
@@ -436,136 +619,6 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                   },
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrdersPlaceholder() {
-    return SafeArea(
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: AppColors.sellerGradient,
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(24),
-              ),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Orders',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Manage customer orders',
-                  style: TextStyle(fontSize: 14, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_outlined,
-                    size: 80,
-                    color: AppColors.textHint.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Orders',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Coming soon!',
-                    style: TextStyle(color: AppColors.textHint),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessagesPlaceholder() {
-    return SafeArea(
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: AppColors.sellerGradient,
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(24),
-              ),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Messages',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Chat with customers',
-                  style: TextStyle(fontSize: 14, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.message_outlined,
-                    size: 80,
-                    color: AppColors.textHint.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Messages',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Coming soon!',
-                    style: TextStyle(color: AppColors.textHint),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -697,10 +750,7 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => Theme(
-                            data: Theme.of(context).copyWith(
-                              colorScheme: Theme.of(context).colorScheme
-                                  .copyWith(primary: AppColors.sellerPrimary),
-                            ),
+                            data: AppTheme.sellerTheme,
                             child: ChangePasswordScreen(),
                           ),
                         ),
@@ -720,50 +770,70 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
     String title,
     String value,
     IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    'View details',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 10, color: color),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -887,7 +957,259 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
       ),
     );
   }
+}
 
+// ── Seller Reviews Section ────────────────────────────────────────────────────
+class _SellerReviewsSection extends StatefulWidget {
+  final String sellerId;
+  const _SellerReviewsSection({required this.sellerId});
+
+  @override
+  State<_SellerReviewsSection> createState() => _SellerReviewsSectionState();
+}
+
+class _SellerReviewsSectionState extends State<_SellerReviewsSection> {
+  final _productViewModel = ProductProvider.instance.productViewModel;
+  List<_ReviewWithProduct> _reviews = [];
+  bool _isLoading = true;
+  String? _error;
+  int _lastProductCount = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _productViewModel.addListener(_onProductsChanged);
+    _loadReviews();
+  }
+
+  @override
+  void dispose() {
+    _productViewModel.removeListener(_onProductsChanged);
+    super.dispose();
+  }
+
+  void _onProductsChanged() {
+    final count = _productViewModel.state.products
+        .where((p) => p.sellerId == widget.sellerId)
+        .length;
+    if (count != _lastProductCount && !_isLoading) {
+      _loadReviews();
+    }
+  }
+
+  Future<void> _loadReviews() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final products = _productViewModel.state.products
+          .where((p) => p.sellerId == widget.sellerId)
+          .toList();
+      _lastProductCount = products.length;
+      final List<_ReviewWithProduct> all = [];
+      for (final product in products) {
+        final reviews = await _productViewModel.fetchProductReviews(product.id);
+        for (final r in reviews) {
+          all.add(_ReviewWithProduct(review: r, productTitle: product.title));
+        }
+      }
+      // Sort by newest first
+      all.sort((a, b) {
+        final aDate = a.review.createdAt ?? '';
+        final bDate = b.review.createdAt ?? '';
+        return bDate.compareTo(aDate);
+      });
+      // Keep only reviews from the last 24 hours
+      final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+      final recent = all.where((item) {
+        if (item.review.createdAt == null ||
+            (item.review.createdAt as String).isEmpty)
+          return true;
+        try {
+          return DateTime.parse(
+            item.review.createdAt as String,
+          ).isAfter(cutoff);
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+      if (mounted) {
+        setState(() {
+          _reviews = recent.take(10).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted)
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_error != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Failed to load reviews',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: _loadReviews,
+              child: const Text(
+                'Retry',
+                style: TextStyle(color: AppColors.sellerPrimary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_reviews.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: const Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.star_border_rounded,
+                size: 40,
+                color: AppColors.textHint,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'No reviews in the last 24 hours',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: _reviews.map((item) => _buildReviewCard(item)).toList(),
+    );
+  }
+
+  Widget _buildReviewCard(_ReviewWithProduct item) {
+    final r = item.review;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.sellerPrimaryLight,
+                child: Text(
+                  (r.userName ?? r.userId)[0].toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.sellerPrimaryDark,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.userName ?? 'Customer',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      item.productTitle,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    i < r.rating
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    size: 16,
+                    color: Colors.amber,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            r.comment,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewWithProduct {
+  final dynamic review;
+  final String productTitle;
+  const _ReviewWithProduct({required this.review, required this.productTitle});
+}
+
+extension on _SellerDashboardScreenState {
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,

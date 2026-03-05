@@ -8,7 +8,6 @@ import 'package:xpress_nepal/features/product/domain/entities/product_entity.dar
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
 import 'package:xpress_nepal/features/cart/presentation/provider/cart_provider.dart';
-import '../../../../features/cart/presentation/pages/cart_page.dart';
 import 'package:xpress_nepal/core/utils/image_helper.dart';
 import 'package:xpress_nepal/features/messages/presentation/pages/compose_message_page.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
@@ -44,7 +43,9 @@ class _CustomerProductDetailScreenState
     final product = _product;
     if (product == null) return 0;
 
-    double price = product.discountPrice ?? product.price;
+    double price = (product.discountPrice != null && product.discountPrice! > 0)
+        ? product.discountPrice!
+        : product.price;
 
     // Add attribute modifiers
     for (var option in _selectedAttributes.values) {
@@ -93,24 +94,12 @@ class _CustomerProductDetailScreenState
 
       if (!mounted) return;
 
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Added $_quantity x ${product.title} to cart'),
-          backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'VIEW CART',
-            textColor: Colors.white,
-            onPressed: () {
-              // Dismiss the snackbar before navigating
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const CartPage()),
-              );
-            },
-          ),
+          duration: const Duration(seconds: 1),
         ),
       );
     } catch (e) {
@@ -125,26 +114,6 @@ class _CustomerProductDetailScreenState
         ),
       );
     }
-  }
-
-  void _toggleWishlist() {
-    final product = _product;
-    if (product == null) return;
-    final provider = Provider.of<WishlistProvider>(context, listen: false);
-    provider.toggleWishlist(product);
-    final isNowWishlisted = provider.isWishlisted(product);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isNowWishlisted ? 'Added to wishlist' : 'Removed from wishlist',
-        ),
-        backgroundColor: isNowWishlisted
-            ? AppColors.primary
-            : AppColors.textSecondary,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),
-      ),
-    );
   }
 
   void _contactSeller(ProductEntity product) {
@@ -233,10 +202,8 @@ class _CustomerProductDetailScreenState
         final isWishlisted = wishlistProvider.isWishlisted(product);
         final hasDiscount =
             product.discountPrice != null &&
+            product.discountPrice! > 0 &&
             product.discountPrice! < product.price;
-        final displayPrice = hasDiscount
-            ? product.discountPrice!
-            : product.price;
         final discountPercent = hasDiscount
             ? ((1 - product.discountPrice! / product.price) * 100).round()
             : 0;
@@ -356,8 +323,11 @@ class _CustomerProductDetailScreenState
                                       'Rs. ${product.price.toStringAsFixed(2)}',
                                       style: const TextStyle(
                                         fontSize: 16,
-                                        color: AppColors.textHint,
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
                                         decoration: TextDecoration.lineThrough,
+                                        decorationColor:
+                                            AppColors.textSecondary,
                                       ),
                                     ),
                                     // Hide discount tag if attributes modified price to avoid confusion
@@ -403,6 +373,11 @@ class _CustomerProductDetailScreenState
                               ],
                               if (product.attributes != null)
                                 _buildAttributes(product.attributes!),
+
+                              // Reviews Section
+                              const SizedBox(height: 24),
+                              _buildReviewsSection(),
+                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
@@ -411,12 +386,6 @@ class _CustomerProductDetailScreenState
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: _buildReviewsSection(),
-              ),
-              const SizedBox(height: 24),
               _buildBottomBar(product),
             ],
           ),
@@ -587,14 +556,9 @@ class _CustomerProductDetailScreenState
           spacing: 8,
           children: options.map((option) {
             final isSelected = _selectedAttributes[key]?.value == option.value;
-            String priceText = '';
-            if (option.priceModifier != 0) {
-              final sign = option.priceModifier > 0 ? '+' : '';
-              priceText = ' ($sign${option.priceModifier.toStringAsFixed(0)})';
-            }
 
             return ChoiceChip(
-              label: Text('${option.value}$priceText'),
+              label: Text(option.value),
               selected: isSelected,
               onSelected: (selected) {
                 setState(() {
@@ -805,7 +769,7 @@ class _CustomerProductDetailScreenState
         ),
         title: Text(review.comment),
         subtitle: Text(
-          review.userId,
+          review.userName ?? review.userId,
           style: TextStyle(fontSize: 12, color: AppColors.textHint),
         ),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
-
+import 'package:xpress_nepal/core/utils/image_helper.dart';
+import 'package:xpress_nepal/features/product/domain/entities/product_entity.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/edit_product_page.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
@@ -49,7 +50,20 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       if (success && mounted) {
         Navigator.pop(context); // Go back to list
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Product deleted successfully')),
+          SnackBar(
+            content: const Text('Product deleted successfully'),
+            backgroundColor: AppColors.sellerPrimary,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              left: MediaQuery.of(context).size.width * 0.4,
+              right: 8,
+              bottom: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     }
@@ -116,8 +130,10 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     color: AppColors.surfaceLight,
                     image: product.images.isNotEmpty
                         ? DecorationImage(
-                            image: NetworkImage(product.images.first),
-                            fit: BoxFit.cover,
+                            image: NetworkImage(
+                              ImageHelper.fixImageUrl(product.images.first),
+                            ),
+                            fit: BoxFit.contain,
                           )
                         : null,
                   ),
@@ -176,21 +192,48 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                       ),
                       const SizedBox(height: 8),
 
-                      Text(
-                        'Rs. ${product.price}',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.sellerPrimary,
-                        ),
-                      ),
-                      if (product.discountPrice != null)
+                      if (product.discountPrice != null &&
+                          product.discountPrice! > 0 &&
+                          product.discountPrice! < product.price) ...[
                         Text(
-                          'Rs. ${product.discountPrice} (Discounted)',
+                          'Rs. ${product.discountPrice}',
                           style: const TextStyle(
-                            fontSize: 14,
-                            decoration: TextDecoration.lineThrough,
-                            color: AppColors.textSecondary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.sellerPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              'Rs. ${product.price}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                decoration: TextDecoration.lineThrough,
+                                decorationColor: AppColors.textPrimary,
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Rs. ${(product.price - product.discountPrice!).toStringAsFixed(0)} off',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else
+                        Text(
+                          'Rs. ${product.price}',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.sellerPrimary,
                           ),
                         ),
 
@@ -220,6 +263,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ), // Truncated ID
                         ],
                       ),
+
+                      if (product.attributes != null)
+                        _buildAttributesSection(product.attributes!),
                     ],
                   ),
                 ),
@@ -227,6 +273,89 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildAttributesSection(ProductAttributesEntity attributes) {
+    final hasColor = attributes.color != null && attributes.color!.isNotEmpty;
+    final hasSize = attributes.size != null && attributes.size!.isNotEmpty;
+    final hasWeight =
+        attributes.weight != null && attributes.weight!.isNotEmpty;
+
+    if (!hasColor && !hasSize && !hasWeight) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        _buildSectionTitle('Attributes & Variants'),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasColor) _buildAttributeRow('Color', attributes.color!),
+              if (hasSize) _buildAttributeRow('Size', attributes.size!),
+              if (hasWeight) _buildAttributeRow('Weight', attributes.weight!),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttributeRow(String label, List<AttributeOption> options) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: options.map((option) {
+              final priceInfo = option.priceModifier != 0
+                  ? ' (${option.priceModifier > 0 ? '+' : ''}Rs. ${option.priceModifier.toStringAsFixed(0)})'
+                  : '';
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.sellerPrimary.withOpacity(0.1),
+                  border: Border.all(
+                    color: AppColors.sellerPrimary.withOpacity(0.4),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${option.value}$priceInfo',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.sellerPrimary,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

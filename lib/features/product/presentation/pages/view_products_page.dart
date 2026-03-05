@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/core/utils/image_helper.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/create_product_page.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/product_details_page.dart';
@@ -86,9 +87,13 @@ class _ViewProductsPageState extends State<ViewProductsPage> {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
+              cursorColor: AppColors.sellerPrimary,
               decoration: InputDecoration(
                 hintText: 'Search products...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: AppColors.sellerPrimary,
+                ),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.clear),
                   onPressed: () {
@@ -98,6 +103,13 @@ class _ViewProductsPageState extends State<ViewProductsPage> {
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.sellerPrimary,
+                    width: 2,
+                  ),
                 ),
                 filled: true,
                 fillColor: AppColors.surfaceLight,
@@ -209,8 +221,12 @@ class _ViewProductsPageState extends State<ViewProductsPage> {
                               borderRadius: BorderRadius.circular(8),
                               image: product.images.isNotEmpty
                                   ? DecorationImage(
-                                      image: NetworkImage(product.images.first),
-                                      fit: BoxFit.cover,
+                                      image: NetworkImage(
+                                        ImageHelper.fixImageUrl(
+                                          product.images.first,
+                                        ),
+                                      ),
+                                      fit: BoxFit.contain,
                                     )
                                   : null,
                             ),
@@ -231,13 +247,40 @@ class _ViewProductsPageState extends State<ViewProductsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
-                              Text(
-                                'Rs. ${product.price}',
-                                style: TextStyle(
-                                  color: AppColors.sellerPrimaryDark,
-                                  fontWeight: FontWeight.bold,
+                              if (product.discountPrice != null &&
+                                  product.discountPrice! > 0 &&
+                                  product.discountPrice! < product.price) ...[
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Rs. ${product.discountPrice}',
+                                      style: TextStyle(
+                                        color: AppColors.sellerPrimaryDark,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Rs. ${product.price}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                        decoration: TextDecoration.lineThrough,
+                                        decorationColor:
+                                            AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                              ] else
+                                Text(
+                                  'Rs. ${product.price}',
+                                  style: TextStyle(
+                                    color: AppColors.sellerPrimaryDark,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               const SizedBox(height: 4),
                               Text('Stock: ${product.stock}'),
                             ],

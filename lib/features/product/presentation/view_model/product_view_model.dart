@@ -20,7 +20,7 @@ class ProductViewModel extends ChangeNotifier {
       rating: rating,
       comment: comment,
     );
-     // Refresh logic handled by provider
+    // Refresh logic handled by provider
   }
 
   final ProductRepository _productRepository;
@@ -155,7 +155,7 @@ class ProductViewModel extends ChangeNotifier {
     int? stock,
     String? brand,
     List<String>? images,
-    Map<String, String>? attributes,
+    Map<String, List<AttributeOption>>? attributes,
     bool? isActive,
   }) async {
     _state = _state.copyWith(status: ProductStatus.loading);

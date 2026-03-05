@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/features/product/domain/entities/review_entity.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_reviews_state.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 

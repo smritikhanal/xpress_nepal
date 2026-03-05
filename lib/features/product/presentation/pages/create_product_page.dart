@@ -35,6 +35,7 @@ class _CreateProductPageState extends State<CreateProductPage> {
   String? _selectedCategoryId;
   File? _selectedImage;
   bool _isLoading = false;
+  double? _priceAfterDiscount;
 
   final _productViewModel = ProductProvider.instance.productViewModel;
   final _categoryViewModel = CategoryProvider.instance.categoryViewModel;
@@ -43,9 +44,26 @@ class _CreateProductPageState extends State<CreateProductPage> {
   @override
   void initState() {
     super.initState();
+    _priceController.addListener(_updatePriceAfterDiscount);
+    _discountPriceController.addListener(_updatePriceAfterDiscount);
     // Load categories when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _categoryViewModel.loadCategories();
+    });
+  }
+
+  void _updatePriceAfterDiscount() {
+    final price = double.tryParse(_priceController.text);
+    final discount = double.tryParse(_discountPriceController.text);
+    setState(() {
+      if (price != null &&
+          discount != null &&
+          discount > 0 &&
+          discount <= price) {
+        _priceAfterDiscount = price - discount;
+      } else {
+        _priceAfterDiscount = null;
+      }
     });
   }
 
@@ -53,6 +71,8 @@ class _CreateProductPageState extends State<CreateProductPage> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _priceController.removeListener(_updatePriceAfterDiscount);
+    _discountPriceController.removeListener(_updatePriceAfterDiscount);
     _priceController.dispose();
     _discountPriceController.dispose();
     _stockController.dispose();
@@ -75,7 +95,20 @@ class _CreateProductPageState extends State<CreateProductPage> {
     if (_formKey.currentState!.validate()) {
       if (_selectedCategoryId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a category')),
+          SnackBar(
+            content: const Text('Please select a category'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              left: MediaQuery.of(context).size.width * 0.4,
+              right: 8,
+              bottom: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
         );
         return;
       }
@@ -84,14 +117,33 @@ class _CreateProductPageState extends State<CreateProductPage> {
 
       // Basic validation for numbers
       final double? price = double.tryParse(_priceController.text);
-      final double? discountPrice = _discountPriceController.text.isNotEmpty
+      final double? discountAmount = _discountPriceController.text.isNotEmpty
           ? double.tryParse(_discountPriceController.text)
+          : null;
+      final double? discountPrice =
+          (discountAmount != null &&
+              discountAmount > 0 &&
+              discountAmount <= price!)
+          ? price - discountAmount
           : null;
       final int? stock = int.tryParse(_stockController.text);
 
       if (price == null || stock == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter valid numbers')),
+          SnackBar(
+            content: const Text('Please enter valid numbers'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              left: MediaQuery.of(context).size.width * 0.4,
+              right: 8,
+              bottom: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
         );
         setState(() => _isLoading = false);
         return;
@@ -111,6 +163,17 @@ class _CreateProductPageState extends State<CreateProductPage> {
                 content: Text(
                   _productViewModel.state.errorMessage ?? 'Image upload failed',
                 ),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+                margin: EdgeInsets.only(
+                  left: MediaQuery.of(context).size.width * 0.4,
+                  right: 8,
+                  bottom: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 2),
               ),
             );
             setState(() => _isLoading = false);
@@ -143,7 +206,20 @@ class _CreateProductPageState extends State<CreateProductPage> {
         setState(() => _isLoading = false);
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Product created successfully')),
+            SnackBar(
+              content: const Text('Product created successfully'),
+              backgroundColor: AppColors.sellerPrimary,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                left: MediaQuery.of(context).size.width * 0.4,
+                right: 8,
+                bottom: 8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
           );
           Navigator.pop(context);
         } else {
@@ -153,6 +229,17 @@ class _CreateProductPageState extends State<CreateProductPage> {
                 _productViewModel.state.errorMessage ??
                     'Failed to create product',
               ),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                left: MediaQuery.of(context).size.width * 0.4,
+                right: 8,
+                bottom: 8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -235,7 +322,7 @@ class _CreateProductPageState extends State<CreateProductPage> {
                   Expanded(
                     child: CustomTextField(
                       controller: _discountPriceController,
-                      labelText: 'Discount Price',
+                      labelText: 'Discount Amount',
                       hintText: 'Optional',
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -245,6 +332,39 @@ class _CreateProductPageState extends State<CreateProductPage> {
                   ),
                 ],
               ),
+              if (_priceAfterDiscount != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.sellerPrimary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Price After Discount',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.sellerPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Rs. ${_priceAfterDiscount!.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppColors.sellerPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // Attribute Fields (Color, Size, Weight)
