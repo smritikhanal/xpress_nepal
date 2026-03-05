@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:provider/provider.dart';
 import 'package:xpress_nepal/features/auth/domain/entities/user_entity.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/features/auth/presentation/state/auth_state.dart';

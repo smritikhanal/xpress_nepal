@@ -400,7 +400,7 @@ void main() {
       final refreshIndicator = tester.widget<RefreshIndicator>(
         find.byType(RefreshIndicator),
       );
-      await refreshIndicator.onRefresh?.call();
+      await refreshIndicator.onRefresh.call();
       await tester.pump();
 
       verify(() => mockAddressViewModel.fetchAddresses()).called(1);

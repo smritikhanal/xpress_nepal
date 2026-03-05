@@ -1,12 +1,11 @@
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:xpress_nepal/features/category/data/datasources/category_remote_datasource.dart';
 import 'package:xpress_nepal/features/category/data/repositories/category_repository_impl.dart';
 import 'package:xpress_nepal/features/category/data/models/category_model.dart';
-import 'package:xpress_nepal/features/category/domain/entities/category_entity.dart';
 
-class MockCategoryRemoteDataSource extends Mock implements CategoryRemoteDataSource {}
+class MockCategoryRemoteDataSource extends Mock
+    implements CategoryRemoteDataSource {}
 
 void main() {
   late CategoryRepositoryImpl repository;
@@ -27,7 +26,9 @@ void main() {
   group('getCategories', () {
     test('should return list of categories from remote data source', () async {
       // Arrange
-      when(() => mockRemoteDataSource.getCategories()).thenAnswer((_) async => [tCategoryModel]);
+      when(
+        () => mockRemoteDataSource.getCategories(),
+      ).thenAnswer((_) async => [tCategoryModel]);
 
       // Act
       final result = await repository.getCategories();

@@ -5,7 +5,6 @@ import 'package:xpress_nepal/features/auth/domain/datasources/auth_local_datasou
 import 'package:xpress_nepal/features/auth/domain/datasources/auth_remote_datasource.dart';
 import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
 import 'package:xpress_nepal/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:xpress_nepal/features/auth/domain/repositories/auth_repository.dart';
 
 class MockAuthLocalDataSource extends Mock implements AuthLocalDataSource {}
 
