@@ -4,7 +4,6 @@ import '../../providers/order_provider.dart';
 import '../../view_model/order_view_model.dart';
 import '../../state/order_state.dart';
 import '../../widgets/order_card.dart';
-import '../../../domain/models/order_entity.dart';
 import 'seller_order_detail_page.dart';
 
 class SellerOrdersPage extends StatefulWidget {
@@ -36,12 +35,35 @@ class _SellerOrdersPageState extends State<SellerOrdersPage> {
           builder: (context, viewModel, child) {
             final state = viewModel.state;
 
-            if (state.status == OrderStatus.loading) {
+            if (state.status == OrderStatus.loading &&
+                state.sellerOrders.isEmpty) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (state.errorMessage != null) {
-              return Center(child: Text('Error: ${state.errorMessage}'));
+            if (state.errorMessage != null && state.sellerOrders.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      state.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => viewModel.getSellerOrders(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             if (state.sellerOrders.isEmpty) {
