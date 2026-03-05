@@ -16,6 +16,7 @@ class OrderViewModel extends ChangeNotifier {
     required String paymentMethod,
     DateTime? deliveryDate,
     String? deliveryTimeSlot,
+    List<String>? selectedProductIds,
     required VoidCallback onSuccess,
   }) async {
     _state = _state.copyWith(status: OrderStatus.loading);
@@ -27,6 +28,7 @@ class OrderViewModel extends ChangeNotifier {
         paymentMethod: paymentMethod,
         deliveryDate: deliveryDate,
         deliveryTimeSlot: deliveryTimeSlot,
+        selectedProductIds: selectedProductIds,
       );
       _state = _state.copyWith(status: OrderStatus.loaded);
       onSuccess();
@@ -45,10 +47,7 @@ class OrderViewModel extends ChangeNotifier {
 
     try {
       final orders = await _repo.getMyOrders();
-      _state = _state.copyWith(
-        status: OrderStatus.loaded,
-        orders: orders,
-      );
+      _state = _state.copyWith(status: OrderStatus.loaded, orders: orders);
     } catch (e) {
       _state = _state.copyWith(
         status: OrderStatus.error,
@@ -103,11 +102,42 @@ class OrderViewModel extends ChangeNotifier {
 
     try {
       final updatedOrder = await _repo.updateOrderStatus(orderId, status);
-      
+
       // Update local seller list
-      final updatedList = _state.sellerOrders.map((order) {
-        return order.id == orderId ? updatedOrder : order;
-      }).toList().cast<OrderEntity>();
+      final updatedList = _state.sellerOrders
+          .map((order) {
+            return order.id == orderId ? updatedOrder : order;
+          })
+          .toList()
+          .cast<OrderEntity>();
+
+      _state = _state.copyWith(
+        status: OrderStatus.loaded,
+        sellerOrders: updatedList,
+      );
+    } catch (e) {
+      _state = _state.copyWith(
+        status: OrderStatus.error,
+        errorMessage: e.toString(),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> updatePaymentStatus(String orderId, String paymentStatus) async {
+    _state = _state.copyWith(status: OrderStatus.loading);
+    notifyListeners();
+
+    try {
+      final updatedOrder = await _repo.updatePaymentStatus(
+        orderId,
+        paymentStatus,
+      );
+
+      final updatedList = _state.sellerOrders
+          .map((order) => order.id == orderId ? updatedOrder : order)
+          .toList()
+          .cast<OrderEntity>();
 
       _state = _state.copyWith(
         status: OrderStatus.loaded,
