@@ -9,6 +9,7 @@ class UserEntity {
   final bool isActive;
   final String? shopName;
   final String? businessDescription;
+  final String? image;
   final String? createdAt;
   final String? updatedAt;
 
@@ -21,6 +22,7 @@ class UserEntity {
     this.isActive = true,
     this.shopName,
     this.businessDescription,
+    this.image,
     this.createdAt,
     this.updatedAt,
   });
@@ -38,6 +40,7 @@ class UserEntity {
         other.isActive == isActive &&
         other.shopName == shopName &&
         other.businessDescription == businessDescription &&
+        other.image == image &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -52,6 +55,7 @@ class UserEntity {
         isActive.hashCode ^
         shopName.hashCode ^
         businessDescription.hashCode ^
+        image.hashCode ^
         createdAt.hashCode ^
         updatedAt.hashCode;
   }

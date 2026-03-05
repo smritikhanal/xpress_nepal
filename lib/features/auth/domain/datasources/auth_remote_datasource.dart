@@ -30,6 +30,21 @@ abstract class AuthRemoteDataSource {
     required String password,
   });
 
+  /// Update user profile via API
+  Future<AuthApiResult> updateProfile({
+    required String name,
+    String? phone,
+    String? image,
+    String? shopName,
+    String? businessDescription,
+  });
+
+  /// Send forgot password email
+  Future<bool> forgotPassword({required String email});
+
+  /// Reset password with token
+  Future<bool> resetPassword({required String token, required String password});
+
   /// Logout user (optional API call)
   Future<void> logout();
 }

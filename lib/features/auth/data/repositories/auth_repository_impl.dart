@@ -250,4 +250,89 @@ class AuthRepositoryImpl implements AuthRepository {
     final random = Random().nextInt(99999).toString().padLeft(5, '0');
     return 'offline_$millis$random';
   }
+
+  @override
+  Future<AuthResult> updateProfile({
+    required String name,
+    String? phone,
+    String? image,
+    String? shopName,
+    String? businessDescription,
+  }) async {
+    try {
+      final isOnline = await _networkInfo.isConnected;
+
+      if (!isOnline) {
+        return AuthResult.failure(
+          'No internet connection. Please connect to update your profile.',
+        );
+      }
+
+      // Call remote API to update profile
+      final result = await _remoteDataSource.updateProfile(
+        name: name,
+        phone: phone,
+        image: image,
+        shopName: shopName,
+        businessDescription: businessDescription,
+      );
+
+      if (result.success && result.user != null) {
+        // Get the current token
+        final currentToken = _localDataSource.getToken();
+
+        // Update local storage with new user data
+        await _persistAuthenticatedUser(result.user!, token: currentToken);
+
+        return AuthResult.success(
+          message: result.message ?? 'Profile updated successfully',
+          user: result.user!.toEntity(),
+        );
+      }
+
+      return AuthResult.failure(result.message ?? 'Profile update failed');
+    } catch (e) {
+      return AuthResult.failure('Profile update failed: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<bool> forgotPassword({required String email}) async {
+    try {
+      final isOnline = await _networkInfo.isConnected;
+
+      if (!isOnline) {
+        throw Exception(
+          'No internet connection. Please connect to request a password reset.',
+        );
+      }
+
+      return await _remoteDataSource.forgotPassword(email: email);
+    } catch (e) {
+      throw Exception('Failed to send reset email: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<bool> resetPassword({
+    required String token,
+    required String password,
+  }) async {
+    try {
+      final isOnline = await _networkInfo.isConnected;
+
+      if (!isOnline) {
+        throw Exception(
+          'No internet connection. Please connect to reset your password.',
+        );
+      }
+
+      return await _remoteDataSource.resetPassword(
+        token: token,
+        password: password,
+      );
+    } catch (e) {
+      throw Exception('Failed to reset password: ${e.toString()}');
+    }
+  }
 }
