@@ -59,10 +59,7 @@ class _ComposeMessagePageState extends State<ComposeMessagePage> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Message sent successfully'),
-          backgroundColor: AppColors.success,
-        ),
+        const SnackBar(content: Text('Message sent successfully')),
       );
       Navigator.pop(context, true);
     } else if (mounted) {

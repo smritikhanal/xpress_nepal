@@ -88,29 +88,61 @@ class MessageViewModel extends ChangeNotifier {
   }
 
   Future<void> markAsRead(String messageId) async {
+    // Optimistic update: immediately mark as read in local state
+    final index = _inbox.indexWhere((m) => m.id == messageId);
+    if (index != -1 && !_inbox[index].isRead) {
+      _inbox[index] = MessageEntity(
+        id: _inbox[index].id,
+        senderId: _inbox[index].senderId,
+        receiverId: _inbox[index].receiverId,
+        productId: _inbox[index].productId,
+        subject: _inbox[index].subject,
+        message: _inbox[index].message,
+        isRead: true,
+        createdAt: _inbox[index].createdAt,
+        updatedAt: _inbox[index].updatedAt,
+        sender: _inbox[index].sender,
+        receiver: _inbox[index].receiver,
+        product: _inbox[index].product,
+      );
+      _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
+      notifyListeners();
+    }
+    // Sync with backend (fire and forget — local state is already updated)
     try {
       await _repository.markAsRead(messageId);
+    } catch (e) {
+      print('Error syncing markAsRead to server: $e');
+    }
+  }
 
-      // Update local state
-      final index = _inbox.indexWhere((m) => m.id == messageId);
-      if (index != -1 && !_inbox[index].isRead) {
-        _inbox[index] = MessageEntity(
-          id: _inbox[index].id,
-          senderId: _inbox[index].senderId,
-          receiverId: _inbox[index].receiverId,
-          productId: _inbox[index].productId,
-          subject: _inbox[index].subject,
-          message: _inbox[index].message,
-          isRead: true,
-          createdAt: _inbox[index].createdAt,
-          updatedAt: _inbox[index].updatedAt,
-          sender: _inbox[index].sender,
-          receiver: _inbox[index].receiver,
-          product: _inbox[index].product,
-        );
-        _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
-        notifyListeners();
-      }
+  Future<void> markAllAsRead() async {
+    try {
+      await _repository.markAllAsRead();
+
+      // Update local state - mark all inbox messages as read
+      _inbox = _inbox.map((message) {
+        if (!message.isRead) {
+          return MessageEntity(
+            id: message.id,
+            senderId: message.senderId,
+            receiverId: message.receiverId,
+            productId: message.productId,
+            subject: message.subject,
+            message: message.message,
+            isRead: true,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
+            sender: message.sender,
+            receiver: message.receiver,
+            product: message.product,
+          );
+        }
+        return message;
+      }).toList();
+
+      _unreadCount = 0;
+      notifyListeners();
     } catch (e) {
       _error = e.toString();
       notifyListeners();

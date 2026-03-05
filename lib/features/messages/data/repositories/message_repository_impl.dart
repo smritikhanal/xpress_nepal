@@ -59,7 +59,7 @@ class MessageRepositoryImpl implements MessageRepository {
     if (response.success && response.data != null) {
       final data = response.data!;
       final actualData = data['data'] ?? data;
-      return actualData['count'] as int? ?? 0;
+      return int.tryParse(actualData['count']?.toString() ?? '0') ?? 0;
     } else {
       throw ApiException(response.message ?? 'Failed to fetch unread count');
     }
@@ -101,6 +101,18 @@ class MessageRepositoryImpl implements MessageRepository {
 
     if (!response.success) {
       throw ApiException(response.message ?? 'Failed to mark as read');
+    }
+  }
+
+  @override
+  Future<void> markAllAsRead() async {
+    final response = await _apiService.put(
+      ApiConstants.markAllMessagesRead,
+      requiresAuth: true,
+    );
+
+    if (!response.success) {
+      throw ApiException(response.message ?? 'Failed to mark all as read');
     }
   }
 

@@ -11,5 +11,6 @@ abstract class MessageRepository {
     required String message,
   });
   Future<void> markAsRead(String messageId);
+  Future<void> markAllAsRead();
   Future<void> deleteMessage(String messageId);
 }
