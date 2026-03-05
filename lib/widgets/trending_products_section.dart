@@ -1,20 +1,65 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
-import 'package:xpress_nepal/features/home/presentation/providers/home_content_provider.dart';
+import 'package:xpress_nepal/features/product/domain/entities/product_entity.dart';
+import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
+import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
+import 'package:xpress_nepal/features/product/presentation/pages/customer_all_products_screen.dart';
+import 'package:xpress_nepal/features/product/presentation/pages/customer_product_detail_screen.dart';
+import 'package:xpress_nepal/core/utils/image_helper.dart';
 import 'package:xpress_nepal/widgets/section_header.dart';
 
-class TrendingProductsSection extends StatelessWidget {
+class TrendingProductsSection extends StatefulWidget {
   const TrendingProductsSection({Key? key}) : super(key: key);
 
   @override
+  State<TrendingProductsSection> createState() =>
+      _TrendingProductsSectionState();
+}
+
+class _TrendingProductsSectionState extends State<TrendingProductsSection> {
+  late final _productViewModel = ProductProvider.instance.productViewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _productViewModel.addListener(_onStateChange);
+    // Load products if not already loaded
+    if (_productViewModel.state.products.isEmpty) {
+      _productViewModel.loadProducts(refresh: true);
+    }
+  }
+
+  void _onStateChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _productViewModel.removeListener(_onStateChange);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final trendingProducts = context
-        .watch<HomeContentProvider>()
-        .trendingProducts;
+    final state = _productViewModel.state;
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth >= 650;
-    final listHeight = isTablet ? 260.0 : 240.0;
+    final listHeight = isTablet ? 290.0 : 240.0;
+
+    // Get trending products (sorted by rating) – show 6 on home, View All shows all
+    final trendingProducts = [...state.products];
+    trendingProducts.sort((a, b) => b.ratingAvg.compareTo(a.ratingAvg));
+    final topTrending = trendingProducts.take(6).toList();
+
+    List<ProductEntity> _allTrending(List<ProductEntity> all) {
+      final sorted = [...all];
+      sorted.sort((a, b) => b.ratingAvg.compareTo(a.ratingAvg));
+      return sorted;
+    }
+
+    if (topTrending.isEmpty && state.status != ProductStatus.loading) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       children: [
@@ -22,30 +67,46 @@ class TrendingProductsSection extends StatelessWidget {
           title: 'Trending Now',
           subtitle: 'Most popular this week',
           icon: Icons.trending_up_rounded,
-          onViewAll: () {},
-        ),
-        SizedBox(
-          height: listHeight,
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            scrollDirection: Axis.horizontal,
-            itemCount: trendingProducts.length,
-            itemBuilder: (context, index) {
-              return _buildTrendingCard(
-                trendingProducts[index],
-                index,
-                isTablet: isTablet,
-                context: context,
-              );
-            },
+          onViewAll: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CustomerAllProductsScreen(
+                title: 'Trending Now',
+                subtitle: 'Most popular products',
+                icon: Icons.trending_up_rounded,
+                filterFn: _allTrending,
+              ),
+            ),
           ),
         ),
+        if (state.status == ProductStatus.loading)
+          const SizedBox(
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else
+          SizedBox(
+            height: listHeight,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              scrollDirection: Axis.horizontal,
+              itemCount: topTrending.length,
+              itemBuilder: (context, index) {
+                return _buildTrendingCard(
+                  topTrending[index],
+                  index,
+                  isTablet: isTablet,
+                  context: context,
+                );
+              },
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildTrendingCard(
-    Map<String, dynamic> product,
+    product,
     int index, {
     required bool isTablet,
     required BuildContext context,
@@ -55,11 +116,13 @@ class TrendingProductsSection extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sample product - Connect backend for real products'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CustomerProductDetailScreen(
+              productId: product.id,
+              product: product,
+            ),
           ),
         );
       },
@@ -74,31 +137,42 @@ class TrendingProductsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image with rank and new badge
+            // Product Image with rank badge
             Stack(
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(16),
                   ),
-                  child: Image.asset(
-                    product['image'],
-                    height: imageHeight,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: imageHeight,
-                        width: double.infinity,
-                        color: AppColors.surfaceLight,
-                        child: Icon(
-                          Icons.inventory_2_outlined,
-                          size: 45,
-                          color: AppColors.primary.withValues(alpha: 0.5),
+                  child: product.images.isNotEmpty
+                      ? Image.network(
+                          ImageHelper.fixImageUrl(product.images[0]),
+                          height: imageHeight,
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: imageHeight,
+                              width: double.infinity,
+                              color: AppColors.surfaceLight,
+                              child: Icon(
+                                Icons.inventory_2_outlined,
+                                size: 45,
+                                color: AppColors.primary.withValues(alpha: 0.5),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          height: imageHeight,
+                          width: double.infinity,
+                          color: AppColors.surfaceLight,
+                          child: Icon(
+                            Icons.inventory_2_outlined,
+                            size: 45,
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                          ),
                         ),
-                      );
-                    },
-                  ),
                 ),
                 // Rank badge
                 Positioned(
@@ -123,8 +197,10 @@ class TrendingProductsSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                // New badge
-                if (product['isNew'])
+                // Discount badge if applicable
+                if (product.discountPrice != null &&
+                    product.discountPrice! > 0 &&
+                    product.discountPrice! < product.price)
                   Positioned(
                     top: 8,
                     right: 8,
@@ -134,12 +210,12 @@ class TrendingProductsSection extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.success,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        'NEW',
-                        style: TextStyle(
+                      child: Text(
+                        '-${((product.price - product.discountPrice!) / product.price * 100).round()}%',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -156,7 +232,7 @@ class TrendingProductsSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product['name'],
+                    product.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -168,13 +244,26 @@ class TrendingProductsSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Rs ${product['price']}',
+                    'Rs ${(product.discountPrice != null && product.discountPrice! > 0 ? product.discountPrice! : product.price).toStringAsFixed(0)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
                     ),
                   ),
+                  if (product.discountPrice != null &&
+                      product.discountPrice! > 0 &&
+                      product.discountPrice! < product.price)
+                    Text(
+                      'Rs ${product.price.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.lineThrough,
+                        decorationColor: AppColors.textSecondary,
+                      ),
+                    ),
                   const SizedBox(height: 6),
                   // Rating
                   Row(
@@ -186,7 +275,7 @@ class TrendingProductsSection extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${product['rating']}',
+                        '${product.ratingAvg ?? 0.0}',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -195,7 +284,7 @@ class TrendingProductsSection extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '(${product['reviews']})',
+                        '(${product.ratingCount ?? 0})',
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,

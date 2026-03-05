@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 import 'package:xpress_nepal/features/notification/presentation/pages/notification_page.dart';
 import 'package:xpress_nepal/features/notification/presentation/providers/notification_provider.dart';
 import 'package:xpress_nepal/features/messages/presentation/pages/messages_page.dart';
 import 'package:xpress_nepal/features/messages/presentation/providers/message_provider.dart';
+import 'package:xpress_nepal/features/home/presentation/pages/wishlist_screen.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provider.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onLogout;
@@ -101,7 +105,41 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
               ] else ...[
-                const Spacer(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: AuthProvider.instance.authViewModel,
+                    builder: (context, _) {
+                      final user =
+                          AuthProvider.instance.authViewModel.state.user;
+                      final firstName = user?.name.split(' ').first ?? 'there';
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Hello, $firstName! 👋',
+                            style: const TextStyle(
+                              color: AppColors.textLight,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'What are you looking for?',
+                            style: TextStyle(
+                              color: AppColors.textLight.withValues(
+                                alpha: 0.75,
+                              ),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ],
 
               const SizedBox(width: 8),
@@ -169,6 +207,29 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                       },
                       isTablet: isTablet,
                       badge: unreadCount > 0 ? unreadCount : null,
+                    );
+                  },
+                ),
+              ),
+              // Wishlist button
+              Container(
+                key: const ValueKey('wishlist_button'),
+                child: Consumer<WishlistProvider>(
+                  builder: (context, wishlistProvider, _) {
+                    final count = wishlistProvider.wishlist.length;
+                    return _buildActionButton(
+                      icon: Icons.favorite_rounded,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const WishlistScreen(),
+                          ),
+                        );
+                      },
+                      isTablet: isTablet,
+                      badge: count > 0 ? count : null,
+                      tooltip: 'Wishlist',
                     );
                   },
                 ),
