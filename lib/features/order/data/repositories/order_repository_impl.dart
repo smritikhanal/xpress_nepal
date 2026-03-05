@@ -13,12 +13,15 @@ class OrderRepositoryImpl implements OrderRepository {
     required String paymentMethod,
     DateTime? deliveryDate,
     String? deliveryTimeSlot,
+    List<String>? selectedProductIds,
   }) async {
     final data = {
       'shippingAddressId': shippingAddressId,
       'paymentMethod': paymentMethod,
       if (deliveryDate != null) 'deliveryDate': deliveryDate.toIso8601String(),
       if (deliveryTimeSlot != null) 'deliveryTimeSlot': deliveryTimeSlot,
+      if (selectedProductIds != null && selectedProductIds.isNotEmpty)
+        'selectedProductIds': selectedProductIds,
     };
     return await remoteDataSource.createOrder(data);
   }
@@ -34,12 +37,23 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   @override
-  Future<List<OrderEntity>> getSellerOrders({int page = 1, int limit = 10}) async {
+  Future<List<OrderEntity>> getSellerOrders({
+    int page = 1,
+    int limit = 10,
+  }) async {
     return await remoteDataSource.getSellerOrders(page, limit);
   }
 
   @override
   Future<OrderEntity> updateOrderStatus(String orderId, String status) async {
     return await remoteDataSource.updateOrderStatus(orderId, status);
+  }
+
+  @override
+  Future<OrderEntity> updatePaymentStatus(
+    String orderId,
+    String paymentStatus,
+  ) async {
+    return await remoteDataSource.updatePaymentStatus(orderId, paymentStatus);
   }
 }

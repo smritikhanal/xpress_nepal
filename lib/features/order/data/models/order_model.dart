@@ -51,6 +51,7 @@ class OrderItemModel extends OrderItemEntity {
     required super.quantity,
     required super.price,
     super.attributes,
+    super.image,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -83,10 +84,17 @@ class OrderItemModel extends OrderItemEntity {
       productId: json['productId'] is Map
           ? json['productId']['_id']
           : (json['productId'] ?? ''),
-      title: json['title'] ?? '',
+      title: json['productId'] is Map
+          ? (json['productId']['title'] ?? json['title'] ?? '')
+          : (json['title'] ?? ''),
       quantity: json['quantity'] ?? 0,
       price: (json['price'] ?? 0).toDouble(),
       attributes: parsedAttributes,
+      image: json['productId'] is Map
+          ? ((json['productId']['images'] as List?)?.isNotEmpty == true
+                ? json['productId']['images'][0] as String?
+                : null)
+          : null,
     );
   }
 }

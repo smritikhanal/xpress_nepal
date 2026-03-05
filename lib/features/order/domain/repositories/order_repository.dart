@@ -7,6 +7,7 @@ abstract class OrderRepository {
     required String paymentMethod,
     DateTime? deliveryDate,
     String? deliveryTimeSlot,
+    List<String>? selectedProductIds,
   });
 
   /// Get current user's order history
@@ -20,4 +21,7 @@ abstract class OrderRepository {
 
   /// Update order status (Seller/Admin only)
   Future<OrderEntity> updateOrderStatus(String orderId, String status);
+
+  /// Update payment status (Seller/Admin only)
+  Future<OrderEntity> updatePaymentStatus(String orderId, String paymentStatus);
 }

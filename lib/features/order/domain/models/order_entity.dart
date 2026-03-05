@@ -26,6 +26,34 @@ class OrderEntity {
     this.deliveryDate,
     this.deliveryTimeSlot,
   });
+
+  OrderEntity copyWith({
+    String? id,
+    String? userId,
+    List<OrderItemEntity>? items,
+    double? totalAmount,
+    String? paymentMethod,
+    String? paymentStatus,
+    String? orderStatus,
+    ShippingAddressEntity? shippingAddress,
+    DateTime? createdAt,
+    DateTime? deliveryDate,
+    String? deliveryTimeSlot,
+  }) {
+    return OrderEntity(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      items: items ?? this.items,
+      totalAmount: totalAmount ?? this.totalAmount,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      orderStatus: orderStatus ?? this.orderStatus,
+      shippingAddress: shippingAddress ?? this.shippingAddress,
+      createdAt: createdAt ?? this.createdAt,
+      deliveryDate: deliveryDate ?? this.deliveryDate,
+      deliveryTimeSlot: deliveryTimeSlot ?? this.deliveryTimeSlot,
+    );
+  }
 }
 
 class OrderItemEntity {
@@ -34,6 +62,7 @@ class OrderItemEntity {
   final int quantity;
   final double price;
   final Map<String, dynamic> attributes;
+  final String? image;
 
   OrderItemEntity({
     required this.productId,
@@ -41,6 +70,7 @@ class OrderItemEntity {
     required this.quantity,
     required this.price,
     this.attributes = const {},
+    this.image,
   });
 }
 
