@@ -48,7 +48,7 @@ abstract class ProductRemoteDataSource {
     int? stock,
     String? brand,
     List<String>? images,
-    Map<String, dynamic>? attributes,
+    Map<String, List<AttributeOption>>? attributes,
     bool? isActive,
   });
 
@@ -205,7 +205,7 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     int? stock,
     String? brand,
     List<String>? images,
-    Map<String, dynamic>? attributes,
+    Map<String, List<AttributeOption>>? attributes,
     bool? isActive,
   }) async {
     final body = <String, dynamic>{};
@@ -217,11 +217,21 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
     if (stock != null) body['stock'] = stock;
     if (brand != null) body['brand'] = brand;
     if (images != null) body['images'] = images;
-    if (attributes != null) body['attributes'] = attributes;
+    if (attributes != null && attributes.isNotEmpty) {
+      final serialized = <String, dynamic>{};
+      attributes.forEach((key, options) {
+        serialized[key] = options
+            .map(
+              (opt) => {'value': opt.value, 'priceModifier': opt.priceModifier},
+            )
+            .toList();
+      });
+      body['attributes'] = serialized;
+    }
     if (isActive != null) body['isActive'] = isActive;
 
     final response = await _apiService.put(
-      '${ApiConstants.apiUrl}/products/$id',
+      '${ApiConstants.apiUrl}/products/id/$id',
       body: body,
       requiresAuth: true,
     );

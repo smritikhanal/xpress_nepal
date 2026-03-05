@@ -1,10 +1,10 @@
-
 import 'package:xpress_nepal/features/product/domain/entities/review_entity.dart';
 
 class ReviewModel extends ReviewEntity {
   ReviewModel({
     required super.id,
     required super.userId,
+    super.userName,
     required super.productId,
     required super.rating,
     required super.comment,
@@ -13,23 +13,36 @@ class ReviewModel extends ReviewEntity {
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
+    // userId is populated by backend as { _id, name } — extract safely
+    final userField = json['userId'];
+    final String userId;
+    final String? userName;
+    if (userField is Map) {
+      userId = userField['_id']?.toString() ?? '';
+      userName = userField['name']?.toString();
+    } else {
+      userId = userField?.toString() ?? '';
+      userName = null;
+    }
+
+    // productId is populated by backend as { _id, title, ... } — extract id safely
+    final productField = json['productId'];
+    final String productId;
+    if (productField is Map) {
+      productId = productField['_id']?.toString() ?? '';
+    } else {
+      productId = productField?.toString() ?? '';
+    }
+
     return ReviewModel(
-      id: json['_id'] ?? '',
-      userId: json['userId'] is String 
-          ? json['userId'] 
-          : (json['userId'] != null ? json['userId']['name'] ?? json['userId']['_id'] ?? '' : ''), 
-      // Handling population if it happens, assuming backend might populate or not. 
-      // The backend controller shows .populate('userId', 'name'), so userId field will be an object.
-      // But let's check the backend controller again. 
-      // Backend: .populate('userId', 'name')
-      // So userId will be { _id: "...", name: "..." }
-      // The original frontend code was just using json['userId'] ?? ''.
-      // Let's make it robust.
-      productId: json['productId'] ?? '',
-      rating: json['rating'] ?? 0,
-      comment: json['comment'] ?? '',
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
+      id: json['_id']?.toString() ?? '',
+      userId: userId,
+      userName: userName,
+      productId: productId,
+      rating: (json['rating'] as num?)?.toInt() ?? 0,
+      comment: json['comment']?.toString() ?? '',
+      createdAt: json['createdAt']?.toString(),
+      updatedAt: json['updatedAt']?.toString(),
     );
   }
 

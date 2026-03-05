@@ -1,6 +1,7 @@
 class ReviewEntity {
   final String id;
   final String userId;
+  final String? userName;
   final String productId;
   final int rating;
   final String comment;
@@ -10,6 +11,7 @@ class ReviewEntity {
   ReviewEntity({
     required this.id,
     required this.userId,
+    this.userName,
     required this.productId,
     required this.rating,
     required this.comment,
@@ -17,4 +19,3 @@ class ReviewEntity {
     this.updatedAt,
   });
 }
-

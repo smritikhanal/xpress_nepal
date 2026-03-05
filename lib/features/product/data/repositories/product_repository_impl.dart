@@ -94,7 +94,7 @@ class ProductRepositoryImpl implements ProductRepository {
     int? stock,
     String? brand,
     List<String>? images,
-    Map<String, String>? attributes,
+    Map<String, List<AttributeOption>>? attributes,
     bool? isActive,
   }) async {
     return await _remoteDataSource.updateProduct(

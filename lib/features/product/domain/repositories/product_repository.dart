@@ -7,7 +7,7 @@ import 'package:xpress_nepal/features/product/domain/entities/review_entity.dart
 abstract class ProductRepository {
   /// Get all reviews for a product
   Future<List<ReviewEntity>> fetchProductReviews(String productId);
-  
+
   /// Create a review
   Future<ReviewEntity> createReview({
     required String productId,
@@ -55,7 +55,7 @@ abstract class ProductRepository {
     int? stock,
     String? brand,
     List<String>? images,
-    Map<String, String>? attributes,
+    Map<String, List<AttributeOption>>? attributes,
     bool? isActive,
   });
 
