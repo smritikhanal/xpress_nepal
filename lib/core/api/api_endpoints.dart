@@ -26,4 +26,39 @@ class ApiEndpoints {
   //login signup endpoints
   static const String userRegister = '/auth/register';
   static const String userLogin = '/auth/login';
+  static const String updateProfile = '/auth/me';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
+  static const String changePassword = '/auth/change-password';
+
+  // Message endpoints
+  static const String sendMessage = '/messages';
+  static const String getInbox = '/messages/inbox';
+  static const String getSentMessages = '/messages/sent';
+  static String markMessageAsRead(String id) => '/messages/$id/read';
+  static String deleteMessage(String id) => '/messages/$id';
+
+  // Notification endpoints
+  static const String getNotifications = '/notifications';
+  static String markNotificationAsRead(String id) => '/notifications/$id/read';
+  static const String markAllNotificationsAsRead = '/notifications/read-all';
+  static String deleteNotification(String id) => '/notifications/$id';
+
+  // Review endpoints
+  static const String getReviews = '/reviews';
+  static const String createReview = '/reviews';
+  static String deleteReview(String id) => '/reviews/$id';
+
+  // Product endpoints
+  static const String getProducts = '/products';
+  static String getProductBySlug(String slug) => '/products/$slug';
+  static String getProductById(String id) => '/products/id/$id';
+
+  // Category endpoints
+  static const String getCategories = '/categories';
+  static String getCategoryBySlug(String slug) => '/categories/$slug';
+
+  // User/Seller endpoints
+  static const String getUsers = '/users';
+  static String getUserById(String id) => '/users/$id';
 }

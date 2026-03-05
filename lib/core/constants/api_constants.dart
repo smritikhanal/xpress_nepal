@@ -50,10 +50,23 @@ class ApiConstants {
   static String get register => '$apiUrl/auth/register';
   static String get login => '$apiUrl/auth/login';
   static String get logout => '$apiUrl/auth/logout';
+  static String get updateProfile => '$apiUrl/auth/me';
+  static String get forgotPassword => '$apiUrl/auth/forgot-password';
+  static String get resetPassword => '$apiUrl/auth/reset-password';
+  static String get changePassword => '$apiUrl/auth/change-password';
 
   // User endpoints
   static String get users => '$apiUrl/users';
   static String get userProfile => '$apiUrl/users/profile';
+
+  // Product endpoints
+  static String get products => '$apiUrl/products';
+  static String productBySlug(String slug) => '$apiUrl/products/$slug';
+  static String productById(String id) => '$apiUrl/products/id/$id';
+
+  // Review endpoints
+  static String get reviews => '$apiUrl/reviews';
+  static String deleteReview(String id) => '$apiUrl/reviews/$id';
 
   // Address endpoints
   static String get addresses => '$apiUrl/addresses';
@@ -72,6 +85,7 @@ class ApiConstants {
   static String get messageSent => '$apiUrl/messages/sent';
   static String get messageUnreadCount => '$apiUrl/messages/unread';
   static String markMessageRead(String id) => '$apiUrl/messages/$id/read';
+  static String get markAllMessagesRead => '$apiUrl/messages/read-all';
   static String deleteMessage(String id) => '$apiUrl/messages/$id';
 
   // Timeout durations (in seconds)
