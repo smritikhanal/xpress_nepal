@@ -6,7 +6,7 @@ class NotificationModel extends NotificationEntity {
     required String title,
     required String message,
     required String type,
-    String? orderId,
+    String? relatedId,
     required bool isRead,
     required DateTime createdAt,
   }) : super(
@@ -14,7 +14,7 @@ class NotificationModel extends NotificationEntity {
          title: title,
          message: message,
          type: type,
-         orderId: orderId,
+         relatedId: relatedId,
          isRead: isRead,
          createdAt: createdAt,
        );
@@ -25,7 +25,7 @@ class NotificationModel extends NotificationEntity {
       title: json['title']?.toString() ?? '',
       message: json['message']?.toString() ?? '',
       type: json['type']?.toString() ?? 'general',
-      orderId: json['orderId']?.toString(),
+      relatedId: json['relatedId']?.toString(),
       isRead: json['isRead'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
@@ -39,7 +39,7 @@ class NotificationModel extends NotificationEntity {
       'title': title,
       'message': message,
       'type': type,
-      'orderId': orderId,
+      'relatedId': relatedId,
       'isRead': isRead,
       'createdAt': createdAt.toIso8601String(),
     };

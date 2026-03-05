@@ -75,17 +75,6 @@ class NotificationViewModel extends ChangeNotifier {
   Future<void> markAllAsRead() async {
     try {
       await _repository.markAllAsRead();
-
-      final updatedList = _state.notifications.map((n) {
-        // We can't easily deep copy effectively with 'copyWith' on Entity unless exposed,
-        // but assuming we re-fetch or manually update fields.
-        // Actually, NotificationEntity has final fields.
-        // I need a way to clone with isRead=true.
-        // Since I don't have copyWith on Entity (I only defined props), let's refetch.
-        return n;
-      }).toList();
-
-      // Better strategy: Reload notifications to get fresh state.
       await loadNotifications(refresh: true);
     } catch (e) {
       print('Error marking all as read: $e');
@@ -99,18 +88,6 @@ class NotificationViewModel extends ChangeNotifier {
       final updatedList = _state.notifications
           .where((n) => n.id != id)
           .toList();
-
-      // Check if deleted was unread to adjust count
-      final wasUnread =
-          _state.notifications
-              .firstWhere(
-                (n) => n.id == id,
-                orElse: () => _state.notifications.first,
-              )
-              .isRead ==
-          false; // logic slightly flawed if list empty but where clause handles list update
-
-      // Re-calculate unread count from new list is safer
       final newCount = updatedList.where((n) => !n.isRead).length;
 
       _state = _state.copyWith(

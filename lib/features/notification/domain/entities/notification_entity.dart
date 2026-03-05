@@ -4,7 +4,7 @@ class NotificationEntity {
   final String message;
   final String
   type; // 'order_status', 'order_shipped', 'order_delivered', 'general'
-  final String? orderId;
+  final String? relatedId;
   final bool isRead;
   final DateTime createdAt;
 
@@ -13,7 +13,7 @@ class NotificationEntity {
     required this.title,
     required this.message,
     required this.type,
-    this.orderId,
+    this.relatedId,
     required this.isRead,
     required this.createdAt,
   });

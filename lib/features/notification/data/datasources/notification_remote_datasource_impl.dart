@@ -27,15 +27,14 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
     );
 
     if (response.success && response.data != null) {
-      // Handle nested data structure from API
       final data = response.data!;
-      final actualData =
-          data['data'] ?? data; // Support both nested and flat structure
 
-      final notificationsList = ((actualData['notifications'] as List?) ?? [])
-          .map((e) => NotificationModel.fromJson(e))
+      // Backend sends: { success, data: [...notifications], unreadCount, total }
+      final notificationsList = ((data['data'] as List?) ?? [])
+          .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
           .toList();
-      final unreadCount = actualData['unreadCount'] as int? ?? 0;
+      final unreadCount =
+          int.tryParse(data['unreadCount']?.toString() ?? '0') ?? 0;
 
       print(
         'NotificationDataSource: Parsed ${notificationsList.length} notifications',
@@ -59,7 +58,9 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
     );
 
     if (response.success && response.data != null) {
-      return NotificationModel.fromJson(response.data!);
+      return NotificationModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } else {
       throw ApiException(response.message ?? 'Failed to mark as read');
     }
