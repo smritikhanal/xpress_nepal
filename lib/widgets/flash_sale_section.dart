@@ -81,12 +81,12 @@ class _FlashSaleSectionState extends State<FlashSaleSection> {
           icon: Icons.flash_on_rounded,
           trailing: _buildCountdownTimer(),
         ),
-        if (state.status == ProductStatus.loading)
+        if (state.status == ProductStatus.loading && state.products.isEmpty)
           const SizedBox(
             height: 200,
             child: Center(child: CircularProgressIndicator()),
           )
-        else
+        else if (flashSaleProducts.isNotEmpty)
           SizedBox(
             height: listHeight,
             child: ListView.builder(

@@ -87,7 +87,7 @@ class _ProductGridState extends State<ProductGrid> {
   Widget _buildProductGrid(int crossAxisCount, bool isTablet) {
     final state = _productViewModel.state;
 
-    // Show loading indicator
+    // Show loading indicator only on initial load (no products yet)
     if (state.status == ProductStatus.loading && state.products.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(32),
@@ -95,8 +95,8 @@ class _ProductGridState extends State<ProductGrid> {
       );
     }
 
-    // Show error state
-    if (state.status == ProductStatus.error) {
+    // Show error state only if no products are available
+    if (state.status == ProductStatus.error && state.products.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(32),
         child: Center(

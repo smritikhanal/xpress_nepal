@@ -75,12 +75,12 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
             ),
           ),
         ),
-        if (state.status == ProductStatus.loading)
+        if (state.status == ProductStatus.loading && state.products.isEmpty)
           const SizedBox(
             height: 200,
             child: Center(child: CircularProgressIndicator()),
           )
-        else
+        else if (deals.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: isTablet
@@ -121,12 +121,12 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
   }
 
   Widget _buildDealCard(
-    deal, {
+    ProductEntity deal, {
     required bool isTablet,
     required BuildContext context,
   }) {
-    final imageWidth = isTablet ? 140.0 : 120.0;
-    final imageHeight = isTablet ? 140.0 : 120.0;
+    final imageWidth = isTablet ? 170.0 : 140.0;
+    final imageHeight = isTablet ? 170.0 : 140.0;
 
     // Calculate discount percentage
     final discountPercent = deal.discountPrice != null
@@ -139,7 +139,7 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
           context,
           MaterialPageRoute(
             builder: (context) =>
-                CustomerProductDetailScreen(productId: deal.id),
+                CustomerProductDetailScreen(productId: deal.id, product: deal),
           ),
         );
       },
@@ -150,29 +150,32 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppColors.softShadow,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
+            // Product Image with overlays
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(16),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
                   ),
                   child: deal.images.isNotEmpty
                       ? Image.network(
                           ImageHelper.fixImageUrl(deal.images[0]),
-                          width: imageWidth,
+                          width: double.infinity,
                           height: imageHeight,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
-                              width: imageWidth,
+                              width: double.infinity,
                               height: imageHeight,
                               decoration: BoxDecoration(
                                 gradient: AppColors.primaryGradient,
-                                borderRadius: const BorderRadius.horizontal(
-                                  left: Radius.circular(16),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
                                 ),
                               ),
                               child: const Icon(
@@ -184,12 +187,13 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
                           },
                         )
                       : Container(
-                          width: imageWidth,
+                          width: double.infinity,
                           height: imageHeight,
                           decoration: BoxDecoration(
                             gradient: AppColors.primaryGradient,
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(16),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
                             ),
                           ),
                           child: const Icon(
@@ -199,6 +203,7 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
                           ),
                         ),
                 ),
+                // Discount badge
                 if (discountPercent > 0)
                   Positioned(
                     top: 8,
@@ -222,86 +227,104 @@ class _DealsOfTheDaySectionState extends State<DealsOfTheDaySection> {
                       ),
                     ),
                   ),
-              ],
-            ),
-            // Deal Details
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      deal.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          'Rs ${deal.discountPrice ?? deal.price}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
+                // Wishlist button (top right)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 4,
                         ),
-                        if (deal.discountPrice != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            'Rs ${deal.price}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                              decoration: TextDecoration.lineThrough,
-                              decorationColor: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                    child: Icon(
+                      Icons.favorite_border_rounded,
+                      size: 18,
+                      color: AppColors.textHint,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Details
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    deal.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        'Rs. ${deal.discountPrice ?? deal.price}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.error.withOpacity(0.3),
+                      if (deal.discountPrice != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          'Rs. ${deal.price}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: AppColors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 14,
+                        color: Colors.amber,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        deal.ratingAvg.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.local_offer_outlined,
-                            size: 14,
-                            color: AppColors.error,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Save $discountPercent%',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.error,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        ' (${deal.ratingCount})',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textHint,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

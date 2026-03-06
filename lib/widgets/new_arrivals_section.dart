@@ -93,12 +93,12 @@ class _NewArrivalsSectionState extends State<NewArrivalsSection> {
             ),
           ),
         ),
-        if (state.status == ProductStatus.loading)
+        if (state.status == ProductStatus.loading && state.products.isEmpty)
           const SizedBox(
             height: 200,
             child: Center(child: CircularProgressIndicator()),
           )
-        else
+        else if (topNew.isNotEmpty)
           SizedBox(
             height: listHeight,
             child: ListView.builder(

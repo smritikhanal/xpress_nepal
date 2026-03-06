@@ -6,7 +6,6 @@ class HomeBottomNav extends StatelessWidget {
   final Function(int) onTap;
   final bool isTablet;
   final int cartItemCount;
-  final int unreadMessageCount;
 
   const HomeBottomNav({
     super.key,
@@ -14,7 +13,6 @@ class HomeBottomNav extends StatelessWidget {
     required this.onTap,
     required this.isTablet,
     this.cartItemCount = 0,
-    this.unreadMessageCount = 0,
   });
 
   @override
@@ -48,13 +46,7 @@ class HomeBottomNav extends StatelessWidget {
                 'Cart',
                 badge: cartItemCount > 0 ? cartItemCount : null,
               ),
-              _buildNavItem(
-                3,
-                Icons.message_rounded,
-                'Messages',
-                badge: unreadMessageCount > 0 ? unreadMessageCount : null,
-              ),
-              _buildNavItem(4, Icons.person_rounded, 'Profile'),
+              _buildNavItem(3, Icons.person_rounded, 'Profile'),
             ],
           ),
         ),

@@ -116,26 +116,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Hello, $firstName! 👋',
-                            style: const TextStyle(
-                              color: AppColors.textLight,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'What are you looking for?',
-                            style: TextStyle(
-                              color: AppColors.textLight.withValues(
-                                alpha: 0.75,
-                              ),
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
+                        children: [],
                       );
                     },
                   ),
