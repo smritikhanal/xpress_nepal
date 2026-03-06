@@ -6,6 +6,8 @@ class ReviewModel extends ReviewEntity {
     required super.userId,
     super.userName,
     required super.productId,
+    super.productTitle,
+    super.productImage,
     required super.rating,
     required super.comment,
     super.createdAt,
@@ -25,11 +27,18 @@ class ReviewModel extends ReviewEntity {
       userName = null;
     }
 
-    // productId is populated by backend as { _id, title, ... } — extract id safely
+    // productId is populated by backend as { _id, title, images, ... } — extract safely
     final productField = json['productId'];
     final String productId;
+    String? productTitle;
+    String? productImage;
     if (productField is Map) {
       productId = productField['_id']?.toString() ?? '';
+      productTitle = productField['title']?.toString();
+      final images = productField['images'];
+      if (images is List && images.isNotEmpty) {
+        productImage = images.first?.toString();
+      }
     } else {
       productId = productField?.toString() ?? '';
     }
@@ -39,6 +48,8 @@ class ReviewModel extends ReviewEntity {
       userId: userId,
       userName: userName,
       productId: productId,
+      productTitle: productTitle,
+      productImage: productImage,
       rating: (json['rating'] as num?)?.toInt() ?? 0,
       comment: json['comment']?.toString() ?? '',
       createdAt: json['createdAt']?.toString(),

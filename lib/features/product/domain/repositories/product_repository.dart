@@ -8,6 +8,9 @@ abstract class ProductRepository {
   /// Get all reviews for a product
   Future<List<ReviewEntity>> fetchProductReviews(String productId);
 
+  /// Get all reviews submitted by the current user
+  Future<List<ReviewEntity>> fetchMyReviews();
+
   /// Create a review
   Future<ReviewEntity> createReview({
     required String productId,

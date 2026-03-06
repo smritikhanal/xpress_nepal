@@ -11,6 +11,11 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
+  Future<List<ReviewEntity>> fetchMyReviews() async {
+    return await _remoteDataSource.fetchMyReviews();
+  }
+
+  @override
   Future<ReviewEntity> createReview({
     required String productId,
     required int rating,

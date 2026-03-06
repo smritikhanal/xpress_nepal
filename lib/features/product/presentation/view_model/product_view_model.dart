@@ -10,6 +10,10 @@ class ProductViewModel extends ChangeNotifier {
     return await _productRepository.fetchProductReviews(productId);
   }
 
+  Future<List<ReviewEntity>> fetchMyReviews() async {
+    return await _productRepository.fetchMyReviews();
+  }
+
   Future<void> submitReview({
     required String productId,
     required int rating,

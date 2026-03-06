@@ -8,6 +8,7 @@ import 'package:xpress_nepal/features/product/domain/entities/review_entity.dart
 
 abstract class ProductRemoteDataSource {
   Future<List<ReviewEntity>> fetchProductReviews(String productId);
+  Future<List<ReviewEntity>> fetchMyReviews();
   Future<ReviewEntity> createReview({
     required String productId,
     required int rating,
@@ -70,6 +71,21 @@ class ProductRemoteDataSourceImpl implements ProductRemoteDataSource {
       return list.map((json) => ReviewModel.fromJson(json)).toList();
     } else {
       throw Exception(response.message ?? 'Failed to fetch reviews');
+    }
+  }
+
+  @override
+  Future<List<ReviewEntity>> fetchMyReviews() async {
+    final response = await _apiService.get(
+      ApiConstants.myReviews,
+      requiresAuth: true,
+    );
+    if (response.success && response.data != null) {
+      final data = response.data!['data'];
+      final List<dynamic> list = data['reviews'] as List<dynamic>;
+      return list.map((json) => ReviewModel.fromJson(json)).toList();
+    } else {
+      throw Exception(response.message ?? 'Failed to fetch your reviews');
     }
   }
 
