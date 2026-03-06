@@ -1,6 +1,24 @@
 import { Request, Response } from 'express';
 import Product from '../models/Product.js';
+import Category from '../models/Category.js';
 import { asyncHandler, sendResponse, getPagination, ApiError } from '../utils/apiHelpers.js';
+
+/**
+ * Helper function to find all child categories recursively
+ */
+async function findAllChildCategories(parentCategoryId: string): Promise<string[]> {
+  const childCategories = await Category.find({ parentCategory: parentCategoryId });
+  const childIds: string[] = [];
+
+  for (const child of childCategories) {
+    childIds.push(child._id.toString());
+    // Recursively find children of this child
+    const grandChildIds = await findAllChildCategories(child._id.toString());
+    childIds.push(...grandChildIds);
+  }
+
+  return childIds;
+}
 
 /**
  * @desc    Get all products with filtering & search
@@ -24,9 +42,14 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
     filter.categoryId = category;
   }
 
-  // Also support categoryId query param
+  // Also support categoryId query param with hierarchical filtering
   if (categoryId) {
-    filter.categoryId = categoryId;
+    // Find all child categories recursively
+    const categoryIds = await findAllChildCategories(categoryId as string);
+    categoryIds.push(categoryId as string); // Include the parent category itself
+    
+    // Filter by parent category OR any of its children
+    filter.categoryId = { $in: categoryIds };
   }
 
   if (brand) {
