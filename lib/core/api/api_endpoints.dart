@@ -4,20 +4,31 @@ import 'dart:io' show Platform;
 class ApiEndpoints {
   ApiEndpoints._();
 
-  // Base URL - determined by platform
+  // Toggle this to switch between emulator and physical device
+  static const bool useEmulator = false;
+
+  // Your computer's local IP for physical device testing
+  static const String localNetworkIp = '192.168.1.5'; // change to your PC IP
+
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost:5000/api';
     }
+
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2:5000/api';
+        if (useEmulator) {
+          return 'http://10.0.2.2:5000/api'; // Android emulator
+        } else {
+          return 'http://$localNetworkIp:5000/api'; // Physical device
+        }
       } else if (Platform.isIOS) {
         return 'http://localhost:5000/api';
       }
     } catch (e) {
       return 'http://localhost:5000/api';
     }
+
     return 'http://localhost:5000/api';
   }
 
