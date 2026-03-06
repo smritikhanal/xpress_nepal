@@ -121,7 +121,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
           .toList(),
       onSuccess: () {
         setState(() => _isLoading = false);
-        CartProvider.instance.clearCart(); // Refresh cart to empty
+        // Remove only the purchased items; leave other cart items intact
+        if (widget.selectedItems != null) {
+          final cartItemIds = CartProvider.instance.state.items
+              .map((i) => i.productId)
+              .toSet();
+          for (final item in widget.selectedItems!) {
+            if (cartItemIds.contains(item.productId)) {
+              CartProvider.instance.removeFromCart(item.productId);
+            }
+          }
+        } else {
+          CartProvider.instance.clearCart();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Order placed successfully!')),
         );
