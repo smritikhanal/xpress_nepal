@@ -8,6 +8,8 @@ import 'package:xpress_nepal/features/product/domain/entities/product_entity.dar
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
 import 'package:xpress_nepal/features/cart/presentation/provider/cart_provider.dart';
+import 'package:xpress_nepal/features/cart/domain/models/cart_item.dart';
+import 'package:xpress_nepal/features/order/presentation/pages/customer/checkout_page.dart';
 import 'package:xpress_nepal/core/utils/image_helper.dart';
 import 'package:xpress_nepal/features/messages/presentation/pages/compose_message_page.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
@@ -116,6 +118,58 @@ class _CustomerProductDetailScreenState
     }
   }
 
+  void _buyNow() async {
+    final product = _product;
+    if (product == null) return;
+
+    // Show loading indicator
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+
+    try {
+      // Add to backend cart so the server can find it when placing the order
+      await CartProvider.instance.addToCart(
+        product.id,
+        _currentPrice,
+        selectedAttributes: _selectedAttributes.isEmpty
+            ? null
+            : _selectedAttributes.map((k, v) => MapEntry(k, v.value)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Could not proceed: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Build the CartItem representation for the checkout summary
+    final cartItem = CartItem(
+      productId: product.id,
+      quantity: _quantity,
+      priceAtTime: _currentPrice,
+      productName: product.title,
+      productImage: product.images.isNotEmpty ? product.images.first : null,
+      selectedAttributes: _selectedAttributes.isEmpty
+          ? null
+          : _selectedAttributes.map((k, v) => MapEntry(k, v.value)),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CheckoutPage(selectedItems: [cartItem]),
+      ),
+    );
+  }
+
   void _contactSeller(ProductEntity product) {
     final authViewModel = AuthProvider.instance.authViewModel;
     final currentUser = authViewModel.state.user;
@@ -156,7 +210,9 @@ class _CustomerProductDetailScreenState
     if (state.status == ProductStatus.loading && _product == null) {
       return Scaffold(
         appBar: _buildAppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
 
@@ -677,13 +733,46 @@ class _CustomerProductDetailScreenState
                       isOutOfStock
                           ? Icons.remove_shopping_cart
                           : Icons.add_shopping_cart,
-                      size: 22,
+                      size: 20,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       isOutOfStock ? 'Out of Stock' : 'Add to Cart',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Buy Now Button
+            Expanded(
+              child: ElevatedButton(
+                onPressed: isOutOfStock ? null : _buyNow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.textHint,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.shopping_bag_outlined, size: 20),
+                    SizedBox(width: 6),
+                    Text(
+                      'Buy Now',
+                      style: TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -727,7 +816,7 @@ class _CustomerProductDetailScreenState
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(),
+                  child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               )
             else if (_reviewsProvider.state.error != null)
@@ -779,11 +868,13 @@ class _CustomerProductDetailScreenState
   void _showReviewDialog() {
     int rating = 5;
     final commentController = TextEditingController();
+    // Capture page context before the dialog builder shadows it
+    final pageContext = context;
 
     showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
+      context: pageContext,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -796,7 +887,7 @@ class _CustomerProductDetailScreenState
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(5, (index) {
                     return IconButton(
-                      onPressed: () => setState(() => rating = index + 1),
+                      onPressed: () => setDialogState(() => rating = index + 1),
                       icon: Icon(
                         index < rating ? Icons.star : Icons.star_border,
                         color: Colors.amber,
@@ -811,7 +902,7 @@ class _CustomerProductDetailScreenState
                 TextField(
                   controller: commentController,
                   decoration: const InputDecoration(
-                    hintText: 'Share your thoughts...',
+                    hintText: 'Share your thoughts (min 10 characters)...',
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.all(12),
                   ),
@@ -821,35 +912,48 @@ class _CustomerProductDetailScreenState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
                 onPressed: () async {
-                  if (commentController.text.trim().isEmpty) return;
+                  final comment = commentController.text.trim();
+                  if (comment.isEmpty) return;
+                  if (comment.length < 10) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(
+                        content: Text('Comment must be at least 10 characters'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
 
-                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(dialogContext); // Close review dialog
 
-                  // Show loading
+                  // Show loading using the page context, not the dialog context
                   showDialog(
-                    context: context,
+                    context: pageContext,
                     barrierDismissible: false,
-                    builder: (_) =>
-                        const Center(child: CircularProgressIndicator()),
+                    builder: (_) => const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
                   );
 
                   try {
                     await _productViewModel.submitReview(
                       productId: widget.productId,
                       rating: rating,
-                      comment: commentController.text,
+                      comment: comment,
                     );
 
                     if (!mounted) return;
-                    Navigator.pop(context); // Close loading
+                    Navigator.pop(pageContext); // Close loading
 
                     _reviewsProvider.fetchReviews(widget.productId);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(pageContext).showSnackBar(
                       const SnackBar(
                         content: Text('Review submitted successfully'),
                         backgroundColor: Colors.green,
@@ -857,15 +961,14 @@ class _CustomerProductDetailScreenState
                     );
                   } catch (e) {
                     if (!mounted) return;
-                    Navigator.pop(context); // Close loading
+                    Navigator.pop(pageContext); // Close loading
 
-                    // Extract message from exception string if possible
-                    String errorMessage = e.toString().replaceAll(
+                    final errorMessage = e.toString().replaceAll(
                       'Exception: ',
                       '',
                     );
 
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(pageContext).showSnackBar(
                       SnackBar(
                         content: Text(errorMessage),
                         backgroundColor: Colors.red,
