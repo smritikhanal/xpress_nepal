@@ -400,6 +400,8 @@ class _MessageChatPageState extends State<MessageChatPage> {
                   hintText: 'Type a message...',
                   hintStyle: TextStyle(color: AppColors.textHint),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 10,

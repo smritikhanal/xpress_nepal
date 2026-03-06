@@ -24,12 +24,19 @@ class _MessagesPageState extends State<MessagesPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {}); // Rebuild to update the action button
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load data only once after the first build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _viewModel.loadInbox();
-      _viewModel.loadSentMessages();
+      if (mounted &&
+          _viewModel.inbox.isEmpty &&
+          _viewModel.sentMessages.isEmpty) {
+        _viewModel.loadInbox();
+        _viewModel.loadSentMessages();
+      }
     });
   }
 
@@ -55,27 +62,32 @@ class _MessagesPageState extends State<MessagesPage>
           iconTheme: const IconThemeData(color: Colors.white),
           elevation: 0,
           actions: [
-            Consumer<MessageViewModel>(
-              builder: (context, vm, _) {
-                // Show mark all as read button only on inbox tab and when there are unread messages
-                if (_tabController.index == 0 && vm.unreadCount > 0) {
-                  return IconButton(
-                    onPressed: () async {
-                      await vm.markAllAsRead();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('All messages marked as read'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.done_all),
-                    tooltip: 'Mark all as read',
-                  );
-                }
-                return const SizedBox.shrink();
+            AnimatedBuilder(
+              animation: _tabController,
+              builder: (context, _) {
+                return Consumer<MessageViewModel>(
+                  builder: (context, vm, _) {
+                    // Show mark all as read button only on inbox tab and when there are unread messages
+                    if (_tabController.index == 0 && vm.unreadCount > 0) {
+                      return IconButton(
+                        onPressed: () async {
+                          await vm.markAllAsRead();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('All messages marked as read'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.done_all),
+                        tooltip: 'Mark all as read',
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                );
               },
             ),
           ],
@@ -141,12 +153,17 @@ class _MessagesPageState extends State<MessagesPage>
       final msgs = List<MessageEntity>.from(e.value)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final sender = msgs.first.sender;
+      // Find product from ANY message in the conversation (not just the latest)
+      final product = msgs
+          .map((m) => m.product)
+          .firstWhere((p) => p != null, orElse: () => null);
       return _ConversationData(
         contactId: e.key,
         contactName: sender?.shopName ?? sender?.name ?? 'Unknown',
         contactEmail: sender?.email ?? '',
         lastMessage: msgs.first,
         unreadCount: msgs.where((m) => !m.isRead).length,
+        product: product,
       );
     }).toList();
     conversations.sort(
@@ -234,12 +251,12 @@ class _MessagesPageState extends State<MessagesPage>
                     vm.deleteMessage(msg.id, fromInbox: true);
                   }
                 },
-                onProductTap: conv.lastMessage.product != null
+                onProductTap: conv.product != null
                     ? () => Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => CustomerProductDetailScreen(
-                            productId: conv.lastMessage.product!.id,
+                            productId: conv.product!.id,
                           ),
                         ),
                       )
@@ -268,12 +285,17 @@ class _MessagesPageState extends State<MessagesPage>
           final msgs = List<MessageEntity>.from(e.value)
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
           final receiver = msgs.first.receiver;
+          // Find product from ANY message in the conversation
+          final product = msgs
+              .map((m) => m.product)
+              .firstWhere((p) => p != null, orElse: () => null);
           return _ConversationData(
             contactId: e.key,
             contactName: receiver?.shopName ?? receiver?.name ?? 'Unknown',
             contactEmail: receiver?.email ?? '',
             lastMessage: msgs.first,
             unreadCount: 0,
+            product: product,
           );
         }).toList();
         conversations.sort(
@@ -333,12 +355,12 @@ class _MessagesPageState extends State<MessagesPage>
                     vm.deleteMessage(msg.id, fromInbox: false);
                   }
                 },
-                onProductTap: conv.lastMessage.product != null
+                onProductTap: conv.product != null
                     ? () => Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => CustomerProductDetailScreen(
-                            productId: conv.lastMessage.product!.id,
+                            productId: conv.product!.id,
                           ),
                         ),
                       )
@@ -364,8 +386,11 @@ class _MessagesPageState extends State<MessagesPage>
       ),
     ).then((_) {
       // Refresh after returning from chat to update unread counts
-      _viewModel.loadInbox();
-      _viewModel.loadSentMessages();
+      // Use microtask to avoid setState during build
+      Future.microtask(() {
+        _viewModel.loadInbox();
+        _viewModel.loadSentMessages();
+      });
     });
   }
 }
@@ -379,6 +404,7 @@ class _ConversationData {
   final String contactEmail;
   final MessageEntity lastMessage;
   final int unreadCount;
+  final MessageProduct? product;
 
   const _ConversationData({
     required this.contactId,
@@ -386,6 +412,7 @@ class _ConversationData {
     required this.contactEmail,
     required this.lastMessage,
     required this.unreadCount,
+    this.product,
   });
 }
 
@@ -425,8 +452,9 @@ class _ConversationCard extends StatelessWidget {
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
       onDismissed: (_) => onDelete(),
-      child: GestureDetector(
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
@@ -562,38 +590,58 @@ class _ConversationCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     // Product tag if any
-                    if (last.product != null) ...[
+                    if (conversation.product != null) ...[
                       const SizedBox(height: 6),
                       GestureDetector(
-                        onTap: onProductTap,
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          if (onProductTap != null) {
+                            onProductTap!();
+                          }
+                        },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
+                            horizontal: 10,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceLight,
+                            color: primaryColor.withOpacity(0.08),
                             borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: primaryColor.withOpacity(0.3),
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.shopping_bag_outlined,
-                                size: 11,
-                                color: AppColors.textSecondary,
+                                size: 14,
+                                color: primaryColor,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  last.product!.title,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
+                                  conversation.product!.title,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: primaryColor.withOpacity(
+                                      0.5,
+                                    ),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 10,
+                                color: primaryColor,
                               ),
                             ],
                           ),

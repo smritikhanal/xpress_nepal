@@ -25,9 +25,37 @@ class MessageViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    // Preserve locally-marked-as-read IDs to avoid race condition with backend
+    final locallyReadIds = _inbox
+        .where((m) => m.isRead)
+        .map((m) => m.id)
+        .toSet();
+
     try {
-      _inbox = await _repository.getInbox(isRead: isRead);
-      await _loadUnreadCount();
+      final freshInbox = await _repository.getInbox(isRead: isRead);
+      // Apply local read state: if we already marked a message as read locally,
+      // keep it as read even if the backend hasn't processed it yet
+      _inbox = freshInbox.map((m) {
+        if (!m.isRead && locallyReadIds.contains(m.id)) {
+          return MessageEntity(
+            id: m.id,
+            senderId: m.senderId,
+            receiverId: m.receiverId,
+            productId: m.productId,
+            subject: m.subject,
+            message: m.message,
+            isRead: true,
+            createdAt: m.createdAt,
+            updatedAt: m.updatedAt,
+            sender: m.sender,
+            receiver: m.receiver,
+            product: m.product,
+          );
+        }
+        return m;
+      }).toList();
+      // Compute count from the merged local state — no separate API call needed
+      _unreadCount = _inbox.where((m) => !m.isRead).length;
     } catch (e) {
       _error = e.toString();
     } finally {
