@@ -9,7 +9,10 @@ class CategoryRemoteDataSource {
     : _apiService = apiService;
 
   Future<List<CategoryModel>> getCategories() async {
-    final response = await _apiService.get('${ApiConstants.apiUrl}/categories');
+    // Request all categories without pagination limit
+    final response = await _apiService.get(
+      '${ApiConstants.apiUrl}/categories?limit=100',
+    );
 
     if (response.success && response.data != null) {
       final dynamic responseData = response.data!['data'];

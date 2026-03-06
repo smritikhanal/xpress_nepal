@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:xpress_nepal/core/api/api_endpoints.dart';
 import 'package:xpress_nepal/core/constants/api_constants.dart';
 import 'package:xpress_nepal/core/services/api_service.dart';
 import 'package:xpress_nepal/features/auth/data/models/user_model.dart';
@@ -79,14 +80,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
   }) async {
     try {
+      debugPrint('Login URL: ${ApiEndpoints.baseUrl}${ApiEndpoints.userLogin}');
+      debugPrint(
+        '[LOGIN] Attempting login for: '
+        'email=${email.toLowerCase().trim()}, password=***',
+      );
       final response = await _apiService.post(
         ApiConstants.login,
         body: {'email': email.toLowerCase().trim(), 'password': password},
       );
+      debugPrint('[LOGIN] Raw API response: ${response.toString()}');
 
       if (response.success && response.data != null) {
         // Backend returns: { success, message, data: { token, user } }
         final responseBody = response.data!;
+        debugPrint('[LOGIN] Response body: $responseBody');
         final nestedData = responseBody['data'] as Map<String, dynamic>?;
 
         if (nestedData != null) {
@@ -94,6 +102,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           final userJson = nestedData['user'] as Map<String, dynamic>?;
 
           if (userJson != null && token != null) {
+            debugPrint('[LOGIN] Login successful, token received.');
             _apiService.setAuthToken(token);
 
             final user = UserModel.fromJson(userJson, token: token);
@@ -104,15 +113,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
               user: user,
               token: token,
             );
+          } else {
+            debugPrint('[LOGIN] Missing user or token in response.');
           }
+        } else {
+          debugPrint('[LOGIN] No nested data in response.');
         }
+      } else {
+        debugPrint('[LOGIN] Login failed: ${response.message}');
       }
 
       return AuthApiResult(
         success: false,
         message: response.message ?? 'Login failed',
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[LOGIN] Exception: $e\n$stack');
       return AuthApiResult(
         success: false,
         message: 'Login error: ${e.toString()}',
