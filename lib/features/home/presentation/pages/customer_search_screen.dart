@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'package:xpress_nepal/features/cart/presentation/provider/cart_provider.dart';
 import 'package:xpress_nepal/features/category/presentation/providers/category_provider.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/home_content_provider.dart';
 import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
@@ -126,17 +127,25 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
     String? categoryId;
 
+    // Try exact match first
     for (final category in categories) {
       if (category.name.toLowerCase() == trimmed.toLowerCase()) {
         categoryId = category.id;
+        debugPrint(
+          '✅ Found exact category match: ${category.name} (ID: $categoryId)',
+        );
         break;
       }
     }
 
+    // Try partial match if exact not found
     if (categoryId == null) {
       for (final category in categories) {
         if (category.name.toLowerCase().contains(trimmed.toLowerCase())) {
           categoryId = category.id;
+          debugPrint(
+            '✅ Found partial category match: ${category.name} (ID: $categoryId)',
+          );
           break;
         }
       }
@@ -144,8 +153,16 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
     // If categories not loaded yet, store as pending and retry after load
     if (categoryId == null && categories.isEmpty) {
+      debugPrint('⏳ Categories not loaded yet, storing as pending: $trimmed');
       _pendingCategoryName = trimmed;
       return;
+    }
+
+    if (categoryId == null) {
+      debugPrint('❌ No category found for: $trimmed');
+      debugPrint(
+        'Available categories: ${categories.map((c) => c.name).join(', ')}',
+      );
     }
 
     setState(() {
@@ -155,6 +172,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       _hasSearched = true;
     });
 
+    debugPrint('🔍 Loading products for category: $trimmed (ID: $categoryId)');
     _productViewModel.loadProducts(
       categoryId: categoryId,
       search: categoryId == null ? trimmed : null,
@@ -183,36 +201,33 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
     super.dispose();
   }
 
-  IconData _resolveCategoryIcon(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('fashion') || lower.contains('cloth')) {
-      return Icons.checkroom_rounded;
-    } else if (lower.contains('electronic') ||
-        lower.contains('device') ||
-        lower.contains('tech')) {
-      return Icons.devices_rounded;
-    } else if (lower.contains('home') ||
-        lower.contains('garden') ||
-        lower.contains('furniture')) {
-      return Icons.home_rounded;
-    } else if (lower.contains('sport') || lower.contains('fitness')) {
-      return Icons.sports_basketball_rounded;
-    } else if (lower.contains('beauty') ||
-        lower.contains('skin') ||
-        lower.contains('cosmetic')) {
-      return Icons.face_rounded;
-    } else if (lower.contains('book') || lower.contains('education')) {
-      return Icons.menu_book_rounded;
-    } else if (lower.contains('toy') ||
-        lower.contains('kid') ||
-        lower.contains('child')) {
-      return Icons.toys_rounded;
-    } else if (lower.contains('food') || lower.contains('grocery')) {
-      return Icons.local_grocery_store_rounded;
-    } else if (lower.contains('health') || lower.contains('medical')) {
-      return Icons.health_and_safety_rounded;
+  IconData _resolveCategoryIcon(String? iconName) {
+    switch (iconName) {
+      case 'checkroom_rounded':
+        return Icons.checkroom_rounded;
+      case 'devices_rounded':
+        return Icons.devices_rounded;
+      case 'home_rounded':
+        return Icons.home_rounded;
+      case 'shopping_basket_rounded':
+        return Icons.shopping_basket_rounded;
+      case 'watch_rounded':
+        return Icons.watch_rounded;
+      case 'directions_car_rounded':
+        return Icons.directions_car_rounded;
+      case 'sports_basketball_rounded':
+        return Icons.sports_basketball_rounded;
+      case 'face_rounded':
+        return Icons.face_rounded;
+      case 'menu_book_rounded':
+        return Icons.menu_book_rounded;
+      case 'toys_rounded':
+        return Icons.toys_rounded;
+      case 'more_horiz_rounded':
+        return Icons.more_horiz_rounded;
+      default:
+        return Icons.category_rounded;
     }
-    return Icons.category_rounded;
   }
 
   @override
@@ -388,82 +403,93 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Popular Categories — filtered to only those with products
+          // All Categories — horizontal scroll with icons
           const Text(
-            'Popular Categories',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            'All Categories',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
-          const SizedBox(height: 12),
-          Builder(
-            builder: (context) {
-              final allCategories = _categoryViewModel.categories;
-              final products = _productViewModel.state.products;
+          const SizedBox(height: 16),
+          Consumer<HomeContentProvider>(
+            builder: (context, homeProvider, _) {
+              final allCategories = homeProvider.categories;
 
-              // Build set of active category names from loaded products
-              final activeCategoryNames = products
-                  .where(
-                    (p) => p.categoryName != null && p.categoryName!.isNotEmpty,
-                  )
-                  .map((p) => p.categoryName!.toLowerCase().trim())
-                  .toSet();
-
-              // Filter to categories that have products (show all if products not loaded yet)
-              final visibleCategories = products.isEmpty
-                  ? allCategories
-                  : allCategories.where((cat) {
-                      return activeCategoryNames.contains(
-                        cat.name.toLowerCase().trim(),
-                      );
-                    }).toList();
-
-              if (_categoryViewModel.isLoading && allCategories.isEmpty) {
+              if (homeProvider.isLoading && allCategories.isEmpty) {
                 return const SizedBox(
-                  height: 60,
+                  height: 100,
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
 
-              if (visibleCategories.isEmpty) {
+              if (allCategories.isEmpty) {
                 return const SizedBox.shrink();
               }
 
-              return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: visibleCategories.map((category) {
-                  return GestureDetector(
-                    onTap: () => _searchByCategoryName(category.name),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 9,
+              return SizedBox(
+                height: 110,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: allCategories.length,
+                  itemBuilder: (context, index) {
+                    final category = allCategories[index];
+                    final categoryName = category['name'] as String? ?? '';
+                    final categoryIcon = category['icon'] as String?;
+
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        right: index < allCategories.length - 1 ? 16 : 0,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _resolveCategoryIcon(category.name),
-                            size: 16,
-                            color: AppColors.primary,
+                      child: GestureDetector(
+                        onTap: () => _searchByCategoryName(categoryName),
+                        child: SizedBox(
+                          width: 80,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  _resolveCategoryIcon(categoryIcon),
+                                  color: AppColors.primary,
+                                  size: 30,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                categoryName,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            category.name,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  },
+                ),
               );
             },
           ),
@@ -473,7 +499,11 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
           // Trending Searches
           const Text(
             'Trending Now',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 12),
           ...List.generate(5, (index) {

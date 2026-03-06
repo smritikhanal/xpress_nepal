@@ -10,8 +10,10 @@ import 'package:xpress_nepal/features/home/presentation/pages/wishlist_screen.da
 import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:xpress_nepal/core/api/api_client.dart';
+import 'package:xpress_nepal/core/api/api_endpoints.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/change_password_screen.dart';
 import 'package:xpress_nepal/features/notification/presentation/pages/notification_page.dart';
+import 'package:xpress_nepal/features/product/presentation/pages/my_reviews_screen.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({Key? key}) : super(key: key);
@@ -411,14 +413,17 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         icon: Icons.person_outline_rounded,
                         title: 'Profile',
                         subtitle: 'View and edit your profile',
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          final updated = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
                                   const CustomerEditProfileScreen(),
                             ),
                           );
+                          if (updated == true && mounted) {
+                            setState(() {}); // Refresh to show updated data
+                          }
                         },
                       ),
                       _ProfileMenuItem(
@@ -430,6 +435,19 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const OrderHistoryPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      _ProfileMenuItem(
+                        icon: Icons.rate_review_outlined,
+                        title: 'My Reviews',
+                        subtitle: 'Feedback you\'ve given to products',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MyReviewsScreen(),
                             ),
                           );
                         },
@@ -581,15 +599,34 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                 ),
               ],
             ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
+            child: ClipOval(
+              child: user?.image != null
+                  ? Image.network(
+                      '${ApiEndpoints.baseUrl.replaceAll('/api', '')}/${user!.image}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : Center(
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 16),
@@ -617,13 +654,16 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
           // Edit Profile Button
           OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final updated = await Navigator.push<bool>(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const CustomerEditProfileScreen(),
                 ),
               );
+              if (updated == true && mounted) {
+                setState(() {}); // Refresh to show updated data
+              }
             },
             icon: const Icon(Icons.edit_rounded, size: 18),
             label: const Text('Edit Profile'),

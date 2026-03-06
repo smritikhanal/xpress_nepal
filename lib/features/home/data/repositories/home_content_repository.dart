@@ -112,13 +112,22 @@ class HomeContentRepository {
   ];
 
   static const List<Map<String, dynamic>> _baseCategories = [
-    {'name': 'Fashion', 'icon': 'checkroom_rounded', 'items': 1234},
     {'name': 'Electronics', 'icon': 'devices_rounded', 'items': 856},
-    {'name': 'Home', 'icon': 'home_rounded', 'items': 654},
-    {'name': 'Sports', 'icon': 'sports_basketball_rounded', 'items': 432},
-    {'name': 'Beauty', 'icon': 'face_rounded', 'items': 567},
-    {'name': 'Books', 'icon': 'menu_book_rounded', 'items': 890},
-    {'name': 'Toys', 'icon': 'toys_rounded', 'items': 321},
-    {'name': 'More', 'icon': 'more_horiz_rounded', 'items': 0},
+    {'name': 'Fashion', 'icon': 'checkroom_rounded', 'items': 1234},
+    {
+      'name': 'Groceries & Essentials',
+      'icon': 'shopping_basket_rounded',
+      'items': 1540,
+    },
+    {'name': 'Toys & Kids', 'icon': 'toys_rounded', 'items': 654},
+    {'name': 'Jewelry & Watches', 'icon': 'watch_rounded', 'items': 432},
+    {'name': 'Beauty & Health', 'icon': 'face_rounded', 'items': 567},
+    {'name': 'Automotive', 'icon': 'directions_car_rounded', 'items': 389},
+    {
+      'name': 'Sports & Fitness',
+      'icon': 'sports_basketball_rounded',
+      'items': 512,
+    },
+    {'name': 'Books & Media', 'icon': 'menu_book_rounded', 'items': 890},
   ];
 }

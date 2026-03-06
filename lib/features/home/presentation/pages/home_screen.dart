@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/core/api/api_endpoints.dart';
 import 'package:xpress_nepal/features/home/presentation/providers/home_content_provider.dart';
 import 'package:xpress_nepal/widgets/home_app_bar.dart';
 import 'package:xpress_nepal/widgets/promo_banner.dart';
@@ -20,8 +21,6 @@ import 'package:xpress_nepal/features/home/presentation/pages/customer_search_sc
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import '../../../../features/cart/cart.dart';
 import '../../../../features/cart/presentation/provider/cart_provider.dart';
-import '../../../../features/messages/presentation/pages/messages_page.dart';
-import '../../../../features/messages/presentation/providers/message_provider.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -135,6 +134,15 @@ class _HomeScreenState extends State<HomeScreen> {
       );
   }
 
+  void _onTabChanged(int index) {
+    setState(() => _selectedIndex = index);
+
+    // When returning to home tab, reload all products without filters
+    if (index == 0) {
+      ProductProvider.instance.productViewModel.loadProducts(refresh: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 650;
@@ -145,15 +153,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ? HomeAppBar(onSearchTap: () => setState(() => _selectedIndex = 1))
           : null,
       body: _buildBody(),
-      bottomNavigationBar: ListenableBuilder(
-        listenable: MessageProvider.instance.viewModel,
-        builder: (context, _) => HomeBottomNav(
-          selectedIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          isTablet: isTablet,
-          cartItemCount: CartProvider.instance.state.items.length,
-          unreadMessageCount: MessageProvider.instance.viewModel.unreadCount,
-        ),
+      bottomNavigationBar: HomeBottomNav(
+        selectedIndex: _selectedIndex,
+        onTap: _onTabChanged,
+        isTablet: isTablet,
+        cartItemCount: CartProvider.instance.state.items.length,
       ),
     );
   }
@@ -295,15 +299,38 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 2,
                       ),
                     ),
-                    child: Center(
-                      child: Text(
-                        firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isTablet ? 22 : 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                    child: ClipOval(
+                      child: user?.image != null
+                          ? Image.network(
+                              '${ApiEndpoints.baseUrl.replaceAll('/api', '')}/${user!.image}',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Text(
+                                    firstName.isNotEmpty
+                                        ? firstName[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: isTablet ? 22 : 20,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Text(
+                                firstName.isNotEmpty
+                                    ? firstName[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isTablet ? 22 : 20,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -324,8 +351,6 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return const CartPage();
       case 3:
-        return const MessagesPage();
-      case 4:
         return const CustomerProfileScreen();
       default:
         return _buildHomeContent();
