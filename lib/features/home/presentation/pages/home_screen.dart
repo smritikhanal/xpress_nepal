@@ -38,11 +38,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Listen to cart changes for badge updates
     CartProvider.instance.addListener(_onCartChanged);
-    // Temporarily disabled on emulator due intermittent sensors plugin
-    // channel availability issues that throw MissingPluginException on startup.
-    // Keep home refresh stable via pull-to-refresh and manual actions.
+
+    // Enable shake-to-refresh
+    _accelerometerSubscription = accelerometerEvents.listen((event) {
+      // Simple shake detection: adjust threshold as needed
+      final double shakeThreshold = 10.0;
+      if (event.x.abs() > shakeThreshold ||
+          event.y.abs() > shakeThreshold ||
+          event.z.abs() > shakeThreshold) {
+        _refreshHomeContent(triggeredByShake: true);
+      }
+    });
   }
 
   @override

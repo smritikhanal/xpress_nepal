@@ -712,7 +712,7 @@ class _CustomerProductDetailScreenState
 
             const SizedBox(width: 12),
 
-            // Add to Cart Button
+            // Add to Cart Button (icon only)
             Expanded(
               child: ElevatedButton(
                 onPressed: isOutOfStock ? null : _addToCart,
@@ -726,31 +726,18 @@ class _CustomerProductDetailScreenState
                   ),
                   elevation: 0,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isOutOfStock
-                          ? Icons.remove_shopping_cart
-                          : Icons.add_shopping_cart,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isOutOfStock ? 'Out of Stock' : 'Add to Cart',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                child: Icon(
+                  isOutOfStock
+                      ? Icons.remove_shopping_cart
+                      : Icons.add_shopping_cart,
+                  size: 22,
                 ),
               ),
             ),
 
             const SizedBox(width: 8),
 
-            // Buy Now Button
+            // Buy Now Button (icon only)
             Expanded(
               child: ElevatedButton(
                 onPressed: isOutOfStock ? null : _buyNow,
@@ -764,20 +751,7 @@ class _CustomerProductDetailScreenState
                   ),
                   elevation: 0,
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.shopping_bag_outlined, size: 20),
-                    SizedBox(width: 6),
-                    Text(
-                      'Buy Now',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+                child: const Icon(Icons.shopping_bag_outlined, size: 22),
               ),
             ),
           ],
