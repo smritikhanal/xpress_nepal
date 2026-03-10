@@ -8,7 +8,6 @@ export const addToCartSchema = z.object({
   body: z.object({
     productId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid product ID'),
     quantity: z.number().int().positive('Quantity must be a positive integer'),
-    attributes: z.record(z.string(), z.string()).optional(),
   }),
 });
 

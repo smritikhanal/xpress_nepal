@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 
 class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -12,6 +12,7 @@ class CustomTextField extends StatefulWidget {
   final Widget? prefixIcon;
   final int maxLines;
   final bool enabled;
+  final Color? focusColor;
 
   const CustomTextField({
     Key? key,
@@ -25,6 +26,7 @@ class CustomTextField extends StatefulWidget {
     this.prefixIcon,
     this.maxLines = 1,
     this.enabled = true,
+    this.focusColor,
   }) : super(key: key);
 
   @override
@@ -70,6 +72,8 @@ class _CustomTextFieldState extends State<CustomTextField>
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = widget.focusColor ?? AppColors.primary;
+
     return AnimatedBuilder(
       animation: _focusAnimation,
       builder: (context, child) {
@@ -79,7 +83,7 @@ class _CustomTextFieldState extends State<CustomTextField>
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(
+                      color: activeColor.withValues(
                         alpha: 0.15 * _focusAnimation.value,
                       ),
                       blurRadius: 12 * _focusAnimation.value,
@@ -128,13 +132,13 @@ class _CustomTextFieldState extends State<CustomTextField>
             fontWeight: FontWeight.w400,
           ),
           labelStyle: TextStyle(
-            color: _isFocused ? AppColors.primary : AppColors.textSecondary,
+            color: _isFocused ? activeColor : AppColors.textSecondary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
-          floatingLabelStyle: const TextStyle(
-            color: AppColors.primary,
-            fontSize: 14,
+          floatingLabelStyle: TextStyle(
+            color: activeColor,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
           border: OutlineInputBorder(
@@ -147,7 +151,7 @@ class _CustomTextFieldState extends State<CustomTextField>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderSide: BorderSide(color: activeColor, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),

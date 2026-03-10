@@ -5,10 +5,13 @@ import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/custom_text_field.dart';
 import 'package:xpress_nepal/features/home/presentation/pages/home_screen.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/register_screen.dart';
+import 'package:xpress_nepal/features/auth/presentation/pages/forgot_password_screen.dart';
 import 'package:xpress_nepal/features/seller/presentation/pages/seller_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  final String? initialMessage;
+
+  const LoginScreen({Key? key, this.initialMessage}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -20,8 +23,10 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authViewModel = AuthProvider.instance.authViewModel;
+  final _biometricAuthManager = AuthProvider.instance.biometricAuthManager;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isBiometricLoading = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -51,6 +56,15 @@ class _LoginScreenState extends State<LoginScreen>
         );
 
     _animationController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final message = widget.initialMessage;
+      if (!mounted || message == null || message.isEmpty) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
+    });
   }
 
   @override
@@ -98,6 +112,8 @@ class _LoginScreenState extends State<LoginScreen>
         });
 
         if (success) {
+          await _promptEnableBiometricLogin();
+
           final user = _authViewModel.state.user;
           final isSeller = user?.role == 'seller';
 
@@ -139,6 +155,83 @@ class _LoginScreenState extends State<LoginScreen>
         }
       }
     }
+  }
+
+  Future<void> _promptEnableBiometricLogin() async {
+    if (_biometricAuthManager.biometricLoginEnabled) return;
+
+    final capability = await _biometricAuthManager.checkCapability();
+    if (!capability.available) return;
+
+    final saved = await _biometricAuthManager.saveCurrentSessionForBiometric();
+    if (!saved || !mounted) return;
+
+    final enable = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enable Fingerprint Login?'),
+        content: const Text(
+          'Use biometric authentication to quickly unlock your secure login token next time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || enable != true) return;
+
+    await _biometricAuthManager.setBiometricLoginEnabled(true);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Fingerprint login enabled successfully.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleBiometricLogin() async {
+    setState(() {
+      _isBiometricLoading = true;
+    });
+
+    final result = await _biometricAuthManager.authenticateAndLogin();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isBiometricLoading = false;
+    });
+
+    if (result.success) {
+      final user = _authViewModel.state.user;
+      final isSeller = user?.role == 'seller';
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              isSeller ? const SellerDashboardScreen() : const HomeScreen(),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -281,7 +374,13 @@ class _LoginScreenState extends State<LoginScreen>
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
                                     onPressed: () {
-                                      // TODO: Navigate to forgot password
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ForgotPasswordScreen(),
+                                        ),
+                                      );
                                     },
                                     style: TextButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
@@ -314,6 +413,35 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
                         SizedBox(height: isTablet ? 32 : 24),
+
+                        if (_biometricAuthManager.biometricLoginEnabled)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: OutlinedButton.icon(
+                              onPressed: _isBiometricLoading
+                                  ? null
+                                  : _handleBiometricLogin,
+                              icon: _isBiometricLoading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.fingerprint_rounded),
+                              label: const Text('Login with Fingerprint'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: Size(
+                                  double.infinity,
+                                  isTablet ? 56 : 52,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
 
                         // Divider with OR
                         Row(

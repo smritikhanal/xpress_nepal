@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 
 class HomeBottomNav extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTap;
   final bool isTablet;
+  final int cartItemCount;
 
   const HomeBottomNav({
     super.key,
     required this.selectedIndex,
     required this.onTap,
     required this.isTablet,
+    this.cartItemCount = 0,
   });
 
   @override
@@ -38,7 +40,12 @@ class HomeBottomNav extends StatelessWidget {
             children: [
               _buildNavItem(0, Icons.home_rounded, 'Home'),
               _buildNavItem(1, Icons.search_rounded, 'Search'),
-              _buildNavItem(2, Icons.shopping_cart_rounded, 'Cart', badge: 2),
+              _buildNavItem(
+                2,
+                Icons.shopping_cart_rounded,
+                'Cart',
+                badge: cartItemCount > 0 ? cartItemCount : null,
+              ),
               _buildNavItem(3, Icons.person_rounded, 'Profile'),
             ],
           ),

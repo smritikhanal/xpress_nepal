@@ -39,6 +39,9 @@ class UserModel extends HiveObject {
   @HiveField(10)
   final String? businessDescription;
 
+  @HiveField(11)
+  final String? image;
+
   UserModel({
     required this.id,
     required this.name,
@@ -51,6 +54,7 @@ class UserModel extends HiveObject {
     this.updatedAt,
     this.shopName,
     this.businessDescription,
+    this.image,
   });
 
   // ================= MODEL → ENTITY =================
@@ -64,6 +68,7 @@ class UserModel extends HiveObject {
       isActive: isActive,
       shopName: shopName,
       businessDescription: businessDescription,
+      image: image,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -80,6 +85,7 @@ class UserModel extends HiveObject {
       isActive: entity.isActive,
       shopName: entity.shopName,
       businessDescription: entity.businessDescription,
+      image: entity.image,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       token: token,
@@ -98,6 +104,7 @@ class UserModel extends HiveObject {
       isActive: json['isActive'] as bool? ?? true,
       shopName: json['shopName'] as String?,
       businessDescription: json['businessDescription'] as String?,
+      image: json['image'] as String?,
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
       token: token,
@@ -114,6 +121,7 @@ class UserModel extends HiveObject {
       'isActive': isActive,
       'shopName': shopName,
       'businessDescription': businessDescription,
+      if (image != null) 'image': image,
     };
   }
 
@@ -130,6 +138,7 @@ class UserModel extends HiveObject {
     String? updatedAt,
     String? shopName,
     String? businessDescription,
+    String? image,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -143,6 +152,7 @@ class UserModel extends HiveObject {
       updatedAt: updatedAt ?? this.updatedAt,
       shopName: shopName ?? this.shopName,
       businessDescription: businessDescription ?? this.businessDescription,
+      image: image ?? this.image,
     );
   }
 

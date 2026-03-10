@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'package:xpress_nepal/widgets/custom_button.dart';
 import 'package:xpress_nepal/widgets/onboarding_page.dart';
 import 'package:xpress_nepal/features/auth/presentation/pages/login_screen.dart';

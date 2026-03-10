@@ -43,13 +43,13 @@ export interface JwtPayload {
  */
 export const generateToken = (userId: string, role: 'customer' | 'seller' | 'superadmin'): string => {
   const secret = process.env.JWT_SECRET;
-
+  
   if (!secret) {
     throw new Error('JWT_SECRET is not defined');
   }
 
   const payload: JwtPayload = { userId, role };
-
+  
   // Token expires in 7 days (for development simplicity)
   // In production, use shorter access tokens + refresh tokens
   return jwt.sign(payload, secret, { expiresIn: '7d' });
@@ -60,7 +60,7 @@ export const generateToken = (userId: string, role: 'customer' | 'seller' | 'sup
  */
 export const verifyToken = (token: string): JwtPayload => {
   const secret = process.env.JWT_SECRET;
-
+  
   if (!secret) {
     throw new Error('JWT_SECRET is not defined');
   }

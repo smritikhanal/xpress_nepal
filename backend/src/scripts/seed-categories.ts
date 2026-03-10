@@ -150,34 +150,96 @@ const categories = [
     "isActive": true
   },
 
-  /* ===== Home & Living ===== */
+  /* ===== Groceries & Essentials ===== */
 
   {
-    "name": "Home & Living",
-    "slug": "home-living",
-    "description": "Home appliances and furniture",
+    "name": "Groceries & Essentials",
+    "slug": "groceries-essentials",
+    "description": "Daily essentials and food items",
     "parentCategory": null,
     "isActive": true
   },
   {
-    "name": "Kitchen Appliances",
-    "slug": "kitchen-appliances",
-    "description": "Cookers, mixers, microwaves",
-    "parentCategory": "home-living",
+    "name": "Food & Beverages",
+    "slug": "food-beverages",
+    "description": "Snacks, drinks, packaged foods",
+    "parentCategory": "groceries-essentials",
     "isActive": true
   },
   {
-    "name": "Furniture",
-    "slug": "furniture",
-    "description": "Beds, sofas, tables",
-    "parentCategory": "home-living",
+    "name": "Personal Care",
+    "slug": "personal-care",
+    "description": "Soaps, sanitizers, toiletries",
+    "parentCategory": "groceries-essentials",
     "isActive": true
   },
   {
-    "name": "Home Decor",
-    "slug": "home-decor",
-    "description": "Decorative items",
-    "parentCategory": "home-living",
+    "name": "Household Items",
+    "slug": "household-items",
+    "description": "Cleaning supplies, storage",
+    "parentCategory": "groceries-essentials",
+    "isActive": true
+  },
+
+  /* ===== Toys & Kids ===== */
+
+  {
+    "name": "Toys & Kids",
+    "slug": "toys-kids",
+    "description": "Toys and children's products",
+    "parentCategory": null,
+    "isActive": true
+  },
+  {
+    "name": "Toys",
+    "slug": "toys",
+    "description": "Action figures, dolls, games",
+    "parentCategory": "toys-kids",
+    "isActive": true
+  },
+  {
+    "name": "Kids Fashion",
+    "slug": "kids-fashion",
+    "description": "Children's clothing and footwear",
+    "parentCategory": "toys-kids",
+    "isActive": true
+  },
+  {
+    "name": "Baby Products",
+    "slug": "baby-products",
+    "description": "Diapers, bottles, baby care",
+    "parentCategory": "toys-kids",
+    "isActive": true
+  },
+
+  /* ===== Jewelry & Watches ===== */
+
+  {
+    "name": "Jewelry & Watches",
+    "slug": "jewelry-watches",
+    "description": "Accessories and timepieces",
+    "parentCategory": null,
+    "isActive": true
+  },
+  {
+    "name": "Jewelry",
+    "slug": "jewelry",
+    "description": "Necklaces, earrings, rings",
+    "parentCategory": "jewelry-watches",
+    "isActive": true
+  },
+  {
+    "name": "Watches",
+    "slug": "watches",
+    "description": "Smart and analog watches",
+    "parentCategory": "jewelry-watches",
+    "isActive": true
+  },
+  {
+    "name": "Fashion Accessories",
+    "slug": "fashion-accessories",
+    "description": "Bags, belts, sunglasses",
+    "parentCategory": "jewelry-watches",
     "isActive": true
   },
 
@@ -212,51 +274,96 @@ const categories = [
     "isActive": true
   },
 
-  /* ===== Sports & Outdoor ===== */
+  /* ===== Automotive ===== */
 
   {
-    "name": "Sports & Outdoor",
-    "slug": "sports-outdoor",
-    "description": "Sports and outdoor equipment",
+    "name": "Automotive",
+    "slug": "automotive",
+    "description": "Vehicle accessories and parts",
+    "parentCategory": null,
+    "isActive": true
+  },
+  {
+    "name": "Car Accessories",
+    "slug": "car-accessories",
+    "description": "Seat covers, mats, organizers",
+    "parentCategory": "automotive",
+    "isActive": true
+  },
+  {
+    "name": "Bike Accessories",
+    "slug": "bike-accessories",
+    "description": "Helmets, covers, parts",
+    "parentCategory": "automotive",
+    "isActive": true
+  },
+  {
+    "name": "Car Care",
+    "slug": "car-care",
+    "description": "Cleaning and maintenance products",
+    "parentCategory": "automotive",
+    "isActive": true
+  },
+
+  /* ===== Sports & Fitness ===== */
+
+  {
+    "name": "Sports & Fitness",
+    "slug": "sports-fitness",
+    "description": "Sports equipment and fitness gear",
     "parentCategory": null,
     "isActive": true
   },
   {
     "name": "Fitness Equipment",
     "slug": "fitness-equipment",
-    "description": "Gym and fitness tools",
-    "parentCategory": "sports-outdoor",
+    "description": "Gym equipment and yoga accessories",
+    "parentCategory": "sports-fitness",
     "isActive": true
   },
   {
-    "name": "Outdoor Gear",
-    "slug": "outdoor-gear",
-    "description": "Camping and hiking gear",
-    "parentCategory": "sports-outdoor",
+    "name": "Sports Equipment",
+    "slug": "sports-equipment",
+    "description": "Cricket, football, badminton gear",
+    "parentCategory": "sports-fitness",
+    "isActive": true
+  },
+  {
+    "name": "Activewear",
+    "slug": "activewear",
+    "description": "Sports clothing and shoes",
+    "parentCategory": "sports-fitness",
     "isActive": true
   },
 
-  /* ===== Books & Stationery ===== */
+  /* ===== Books & Media ===== */
 
   {
-    "name": "Books & Stationery",
-    "slug": "books-stationery",
-    "description": "Books and office supplies",
+    "name": "Books & Media",
+    "slug": "books-media",
+    "description": "Books, stationery and media",
     "parentCategory": null,
     "isActive": true
   },
   {
     "name": "Books",
     "slug": "books",
-    "description": "Educational and novels",
-    "parentCategory": "books-stationery",
+    "description": "Educational, novels, magazines",
+    "parentCategory": "books-media",
     "isActive": true
   },
   {
     "name": "Stationery",
     "slug": "stationery",
-    "description": "Pens, notebooks, office items",
-    "parentCategory": "books-stationery",
+    "description": "Pens, notebooks, office supplies",
+    "parentCategory": "books-media",
+    "isActive": true
+  },
+  {
+    "name": "Musical Instruments",
+    "slug": "musical-instruments",
+    "description": "Guitars, keyboards, accessories",
+    "parentCategory": "books-media",
     "isActive": true
   }
 ];

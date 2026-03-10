@@ -1,28 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
 import 'package:xpress_nepal/features/product/domain/entities/product_entity.dart';
+import 'package:xpress_nepal/features/product/presentation/pages/customer_all_products_screen.dart';
 import 'package:xpress_nepal/features/product/presentation/pages/customer_product_detail_screen.dart';
 import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
 import 'package:xpress_nepal/features/product/presentation/state/product_state.dart';
 import 'package:xpress_nepal/widgets/section_header.dart';
-
-/// Sample product for fallback/placeholder display
-class SampleProduct {
-  final String name;
-  final String image;
-  final double price;
-  final double rating;
-
-  SampleProduct({
-    required this.name,
-    required this.image,
-    required this.price,
-    required this.rating,
-  });
-}
+import 'package:xpress_nepal/core/utils/image_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provider.dart';
 
 class ProductGrid extends StatefulWidget {
-  const ProductGrid({super.key});
+  /// When set, only this many products are shown on the home page.
+  /// A "View All" button is displayed that navigates to the full list.
+  final int? limit;
+
+  const ProductGrid({super.key, this.limit});
 
   @override
   State<ProductGrid> createState() => _ProductGridState();
@@ -30,46 +23,6 @@ class ProductGrid extends StatefulWidget {
 
 class _ProductGridState extends State<ProductGrid> {
   late final _productViewModel = ProductProvider.instance.productViewModel;
-
-  // Sample products as fallback
-  static final List<SampleProduct> sampleProducts = [
-    SampleProduct(
-      name: 'iPhone 15 Pro',
-      image: 'assets/images/products/iphone.jpg',
-      price: 190000,
-      rating: 4.8,
-    ),
-    SampleProduct(
-      name: 'Samsung Galaxy S24',
-      image: 'assets/images/products/samsung.jpg',
-      price: 85550,
-      rating: 4.6,
-    ),
-    SampleProduct(
-      name: 'Winter Jacket',
-      image: 'assets/images/products/winterjacket.jpg',
-      price: 1520,
-      rating: 4.5,
-    ),
-    SampleProduct(
-      name: 'Summer Dress',
-      image: 'assets/images/products/dress.jpg',
-      price: 2999,
-      rating: 4.7,
-    ),
-    SampleProduct(
-      name: 'Razer Blade',
-      image: 'assets/images/products/razerblade.jpg',
-      price: 199000,
-      rating: 4.9,
-    ),
-    SampleProduct(
-      name: 'Leather Boots',
-      image: 'assets/images/products/boots.jpg',
-      price: 3500,
-      rating: 4.4,
-    ),
-  ];
 
   @override
   void initState() {
@@ -109,7 +62,19 @@ class _ProductGridState extends State<ProductGrid> {
           title: 'All Products',
           subtitle: 'Browse our collection',
           icon: Icons.shopping_bag_rounded,
-          onViewAll: () {},
+          onViewAll: widget.limit != null
+              ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CustomerAllProductsScreen(
+                      title: 'All Products',
+                      subtitle: 'Browse our complete collection',
+                      icon: Icons.shopping_bag_rounded,
+                      filterFn: (products) => products,
+                    ),
+                  ),
+                )
+              : null,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -122,7 +87,7 @@ class _ProductGridState extends State<ProductGrid> {
   Widget _buildProductGrid(int crossAxisCount, bool isTablet) {
     final state = _productViewModel.state;
 
-    // Show loading indicator
+    // Show loading indicator only on initial load (no products yet)
     if (state.status == ProductStatus.loading && state.products.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(32),
@@ -130,16 +95,64 @@ class _ProductGridState extends State<ProductGrid> {
       );
     }
 
-    // Use backend products if available, otherwise show sample products
-    final hasBackendProducts = state.products.isNotEmpty;
-    final itemCount = hasBackendProducts
-        ? state.products.length
-        : sampleProducts.length;
+    // Show error state only if no products are available
+    if (state.status == ProductStatus.error && state.products.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 48, color: AppColors.error),
+              const SizedBox(height: 16),
+              Text(
+                state.errorMessage ?? 'Failed to load products',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _productViewModel.loadProducts(refresh: true),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
+    // Show empty state
+    if (state.products.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(
+                Icons.shopping_bag_outlined,
+                size: 48,
+                color: AppColors.textHint,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No products available',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Apply limit when set (home page preview)
+    final displayProducts = widget.limit != null
+        ? state.products.take(widget.limit!).toList()
+        : state.products;
+
+    // Show products from backend
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: itemCount,
+      itemCount: displayProducts.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
@@ -147,11 +160,7 @@ class _ProductGridState extends State<ProductGrid> {
         childAspectRatio: isTablet ? 0.72 : 0.68,
       ),
       itemBuilder: (context, index) {
-        if (hasBackendProducts) {
-          return ProductCardFromEntity(product: state.products[index]);
-        } else {
-          return ProductCardFromSample(product: sampleProducts[index]);
-        }
+        return ProductCardFromEntity(product: displayProducts[index]);
       },
     );
   }
@@ -178,7 +187,9 @@ class ProductCardFromEntity extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasDiscount =
-        product.discountPrice != null && product.discountPrice! < product.price;
+        product.discountPrice != null &&
+        product.discountPrice! > 0 &&
+        product.discountPrice! < product.price;
     final displayPrice = hasDiscount ? product.discountPrice! : product.price;
     final imageUrl = product.images.isNotEmpty ? product.images.first : null;
 
@@ -202,8 +213,8 @@ class ProductCardFromEntity extends StatelessWidget {
                     ),
                     child: imageUrl != null
                         ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
+                            ImageHelper.fixImageUrl(imageUrl),
+                            fit: BoxFit.contain,
                             width: double.infinity,
                             errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholder();
@@ -239,24 +250,38 @@ class ProductCardFromEntity extends StatelessWidget {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                    child: Consumer<WishlistProvider>(
+                      builder: (context, wishlistProvider, _) {
+                        final isWishlisted = wishlistProvider.isWishlisted(
+                          product,
+                        );
+                        return GestureDetector(
+                          onTap: () => wishlistProvider.toggleWishlist(product),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardBackground,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              isWishlisted
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                              color: isWishlisted
+                                  ? AppColors.error
+                                  : AppColors.textSecondary,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border_rounded,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -292,10 +317,12 @@ class ProductCardFromEntity extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           'Rs. ${product.price.toStringAsFixed(0)}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: AppColors.textHint,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
                             decoration: TextDecoration.lineThrough,
+                            decorationColor: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -344,138 +371,6 @@ class ProductCardFromEntity extends StatelessWidget {
         Icons.shopping_bag_outlined,
         size: 50,
         color: AppColors.primary.withOpacity(0.5),
-      ),
-    );
-  }
-}
-
-/// Product card for sample/fallback products
-class ProductCardFromSample extends StatelessWidget {
-  final SampleProduct product;
-
-  const ProductCardFromSample({super.key, required this.product});
-
-  void _showSampleMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sample product - Connect backend for real products'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showSampleMessage(context),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.softShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: Image.asset(
-                      product.image,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: double.infinity,
-                          color: AppColors.surfaceLight,
-                          child: Icon(
-                            Icons.shopping_bag_outlined,
-                            size: 50,
-                            color: AppColors.primary.withOpacity(0.5),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border_rounded,
-                        size: 18,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rs. ${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 14,
-                        color: Colors.amber,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        product.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

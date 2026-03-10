@@ -40,11 +40,6 @@ export interface IProduct extends Document {
   updatedAt: Date;
 }
 
-const attributeOptionSchema = new Schema({
-  value: { type: String, required: true },
-  priceModifier: { type: Number, default: 0 },
-}, { _id: false });
-
 const productSchema = new Schema<IProduct>(
   {
     title: {
@@ -98,9 +93,18 @@ const productSchema = new Schema<IProduct>(
       default: 0,
     },
     attributes: {
-      color: [attributeOptionSchema],
-      size: [attributeOptionSchema],
-      weight: [attributeOptionSchema],
+      color: [{
+        value: { type: String, required: true },
+        priceModifier: { type: Number, default: 0 },
+      }],
+      size: [{
+        value: { type: String, required: true },
+        priceModifier: { type: Number, default: 0 },
+      }],
+      weight: [{
+        value: { type: String, required: true },
+        priceModifier: { type: Number, default: 0 },
+      }],
     },
     ratingAvg: {
       type: Number,
@@ -129,6 +133,6 @@ productSchema.index({ price: 1 });
 productSchema.index({ isActive: 1 });
 productSchema.index({ title: 'text', description: 'text' }); // Text search
 
-const Product = mongoose.model<IProduct>('Product', productSchema);
+const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', productSchema);
 
 export default Product;

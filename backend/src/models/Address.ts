@@ -69,6 +69,6 @@ const addressSchema = new Schema<IAddress>(
 // Index for faster user address lookups
 addressSchema.index({ userId: 1 });
 
-const Address = mongoose.model<IAddress>('Address', addressSchema);
+const Address = mongoose.models.Address || mongoose.model<IAddress>('Address', addressSchema);
 
 export default Address;

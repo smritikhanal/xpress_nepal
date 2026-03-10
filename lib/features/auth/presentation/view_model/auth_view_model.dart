@@ -29,6 +29,9 @@ class AuthViewModel extends ChangeNotifier {
   /// Check if user is logged in (synchronous check)
   bool get isLoggedIn => _authRepository.isLoggedIn();
 
+  /// Get currently stored auth token (if any)
+  String? get currentToken => _authRepository.getCurrentToken();
+
   /// Sign up with name, email, password, and optional phone/role
   Future<bool> signUp({
     required String name,
@@ -84,11 +87,65 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
+  /// Login by restoring a previously stored authenticated token.
+  Future<bool> loginWithStoredToken({
+    required String userId,
+    required String token,
+  }) async {
+    _state = AuthState.loading();
+    notifyListeners();
+
+    final result = await _authRepository.loginWithStoredToken(
+      userId: userId,
+      token: token,
+    );
+
+    if (result.success && result.user != null) {
+      _state = AuthState.authenticated(result.user!);
+      notifyListeners();
+      return true;
+    }
+
+    _state = AuthState.error(result.message ?? 'Biometric login failed');
+    notifyListeners();
+    return false;
+  }
+
   /// Logout current user
   Future<void> logout() async {
     await _authRepository.logout();
     _state = AuthState.unauthenticated();
     notifyListeners();
+  }
+
+  /// Update user profile (name, phone, image, shopName, businessDescription)
+  Future<bool> updateProfile({
+    required String name,
+    String? phone,
+    String? image,
+    String? shopName,
+    String? businessDescription,
+  }) async {
+    _state = AuthState.loading();
+    notifyListeners();
+
+    final result = await _authRepository.updateProfile(
+      name: name,
+      phone: phone,
+      image: image,
+      shopName: shopName,
+      businessDescription: businessDescription,
+    );
+
+    if (result.success && result.user != null) {
+      _state = AuthState.authenticated(result.user!);
+      notifyListeners();
+      return true;
+    } else {
+      _state = AuthState.error(result.message ?? 'Profile update failed');
+      notifyListeners();
+      return false;
+    }
   }
 
   /// Clear error state
@@ -101,4 +158,29 @@ class AuthViewModel extends ChangeNotifier {
 
   /// Get error message
   String? get errorMessage => _state.errorMessage;
+
+  /// Send forgot password email
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _authRepository.forgotPassword(email: email);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  /// Reset password with token
+  Future<void> resetPassword(String token, String password) async {
+    try {
+      final success = await _authRepository.resetPassword(
+        token: token,
+        password: password,
+      );
+
+      if (!success) {
+        throw Exception('Failed to reset password');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
 }

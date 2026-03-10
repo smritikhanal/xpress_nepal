@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 
 class CustomButton extends StatefulWidget {
   final String text;

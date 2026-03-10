@@ -19,6 +19,7 @@ export const getProductReviews = asyncHandler(async (req: Request, res: Response
   const [reviews, total] = await Promise.all([
     Review.find({ productId })
       .populate('userId', 'name')
+      .populate('productId', 'title images price discountPrice')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 }),
@@ -72,6 +73,29 @@ export const createReview = asyncHandler(async (req: Request, res: Response) => 
   });
 
   sendResponse(res, 201, review, 'Review submitted successfully');
+});
+
+/**
+ * @desc    Get reviews by the logged-in user
+ * @route   GET /api/reviews/my-reviews
+ * @access  Private
+ */
+export const getMyReviews = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, skip } = getPagination(req.query);
+
+  const [reviews, total] = await Promise.all([
+    Review.find({ userId: req.user?.id })
+      .populate('productId', 'title images price discountPrice')
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }),
+    Review.countDocuments({ userId: req.user?.id }),
+  ]);
+
+  sendResponse(res, 200, {
+    reviews,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+  });
 });
 
 /**

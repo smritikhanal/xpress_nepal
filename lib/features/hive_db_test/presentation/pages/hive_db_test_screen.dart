@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
 import '../../data/datasources/note_local_datasource.dart';
 import '../../data/repositories/note_repository_impl.dart';
 import '../../domain/entities/note_entity.dart';

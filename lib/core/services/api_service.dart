@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:xpress_nepal/core/constants/api_constants.dart';
 
 /// Custom exception for API errors
@@ -245,6 +246,7 @@ class ApiService {
     String url, {
     required File file,
     String fieldName = 'image',
+    Map<String, String>? fields,
     bool requiresAuth = false,
   }) async {
     try {
@@ -256,10 +258,41 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $_authToken';
       }
 
+      // Add fields
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
       // Add file
+      // Determine content type from file extension
+      final extension = file.path.split('.').last.toLowerCase();
+      MediaType contentType;
+
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+          contentType = MediaType('image', 'jpeg');
+          break;
+        case 'png':
+          contentType = MediaType('image', 'png');
+          break;
+        case 'gif':
+          contentType = MediaType('image', 'gif');
+          break;
+        case 'webp':
+          contentType = MediaType('image', 'webp');
+          break;
+        case 'heic':
+          contentType = MediaType('image', 'heic');
+          break;
+        default:
+          contentType = MediaType('image', 'jpeg'); // Default fallback
+      }
+
       final multipartFile = await http.MultipartFile.fromPath(
         fieldName,
         file.path,
+        contentType: contentType,
       );
       request.files.add(multipartFile);
 
@@ -278,6 +311,83 @@ class ApiService {
       return ApiResponse(
         success: false,
         message: 'Upload failed: ${e.toString()}',
+        statusCode: 0,
+      );
+    }
+  }
+
+  /// Make a Multipart PUT request (for file uploads with update)
+  Future<ApiResponse<Map<String, dynamic>>> putMultipart(
+    String url, {
+    File? file,
+    String fieldName = 'image',
+    Map<String, String>? fields,
+    bool requiresAuth = false,
+  }) async {
+    try {
+      final request = http.MultipartRequest('PUT', Uri.parse(url));
+
+      // Add headers
+      request.headers['Accept'] = 'application/json';
+      if (requiresAuth && _authToken != null) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+
+      // Add fields
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      // Add file if provided
+      if (file != null) {
+        // Determine content type from file extension
+        final extension = file.path.split('.').last.toLowerCase();
+        MediaType contentType;
+
+        switch (extension) {
+          case 'jpg':
+          case 'jpeg':
+            contentType = MediaType('image', 'jpeg');
+            break;
+          case 'png':
+            contentType = MediaType('image', 'png');
+            break;
+          case 'gif':
+            contentType = MediaType('image', 'gif');
+            break;
+          case 'webp':
+            contentType = MediaType('image', 'webp');
+            break;
+          case 'heic':
+            contentType = MediaType('image', 'heic');
+            break;
+          default:
+            contentType = MediaType('image', 'jpeg'); // Default fallback
+        }
+
+        final multipartFile = await http.MultipartFile.fromPath(
+          fieldName,
+          file.path,
+          contentType: contentType,
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } on SocketException {
+      return ApiResponse(
+        success: false,
+        message: 'No internet connection. Please check your network.',
+        statusCode: 0,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Update failed: ${e.toString()}',
         statusCode: 0,
       );
     }

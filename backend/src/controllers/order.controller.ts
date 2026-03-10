@@ -6,6 +6,7 @@ import Product from '../models/Product.js';
 import Address from '../models/Address.js';
 import { asyncHandler, sendResponse, getPagination, ApiError } from '../utils/apiHelpers.js';
 import { createNotification } from './notification.controller.js';
+import { emitOrderStatusUpdate, emitDeliveryTrackingUpdate, emitNewOrder } from '../utils/socketEvents.js';
 
 /**
  * @desc    Create order from cart
@@ -13,7 +14,7 @@ import { createNotification } from './notification.controller.js';
  * @access  Private
  */
 export const createOrder = asyncHandler(async (req: Request, res: Response) => {
-  const { shippingAddressId, paymentMethod, deliveryDate, deliveryTimeSlot } = req.body;
+  const { shippingAddressId, paymentMethod, deliveryDate, deliveryTimeSlot, selectedProductIds } = req.body;
 
   interface PopulatedProduct {
     _id: mongoose.Types.ObjectId;
@@ -24,10 +25,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
   }
 
   interface ICartItem {
-    productId: mongoose.Types.ObjectId | PopulatedProduct;
+    productId: PopulatedProduct | null;
     quantity: number;
-    priceAtTime: number;
-    attributes?: Map<string, string> | Record<string, string>;
   }
 
   // Fetch the shipping address
@@ -53,46 +52,79 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 
   // Get user's cart
   const cart = await Cart.findOne({ userId: req.user?.id })
-    .populate<{ items: ICartItem[] }>('items.productId');
+    .populate<{ items: ICartItem[] }>('items.productId', 'title price discountPrice stock');
 
   if (!cart || cart.items.length === 0) {
     throw new ApiError('Cart is empty', 400);
+  }
+
+  // If client specified which products to order, filter to only those
+  const itemsToOrder = selectedProductIds && Array.isArray(selectedProductIds) && selectedProductIds.length > 0
+    ? cart.items.filter((item: ICartItem) => {
+        const pid = item.productId?._id?.toString() ?? (item.productId as any)?.toString();
+        return selectedProductIds.includes(pid);
+      })
+    : cart.items;
+
+  if (itemsToOrder.length === 0) {
+    throw new ApiError('No matching items found in cart', 400);
+  }
+
+  // Validate cart products (populate can return null for deleted/unavailable products)
+  const validItems: { product: PopulatedProduct; quantity: number }[] = [];
+  let hasInvalidItems = false;
+
+  for (const item of itemsToOrder) {
+    const product = item.productId;
+
+    if (!product) {
+      hasInvalidItems = true;
+      continue;
+    }
+
+    if (product.stock < item.quantity) {
+      throw new ApiError(`Insufficient stock for ${product.title}`, 400);
+    }
+
+    validItems.push({
+      product,
+      quantity: item.quantity,
+    });
+  }
+
+  if (hasInvalidItems) {
+    cart.items = cart.items.filter((item: ICartItem) => !!item.productId) as typeof cart.items;
+    await cart.save();
+    throw new ApiError(
+      'Some products in your cart are no longer available and were removed. Please review your cart and place the order again.',
+      400
+    );
   }
 
   // Build order items and calculate total
   const orderItems = [];
   let totalAmount = 0;
 
-  for (const item of cart.items) {
-    const product = item.productId as PopulatedProduct;
-
-    const quantity = item.quantity;
-
-    if (product.stock < quantity) {
-      throw new ApiError(`Insufficient stock for ${product.title}`, 400);
-    }
-
-    // Use priceAtTime from cart (which includes modifier) or fallback to current product price
-    const price = item.priceAtTime ?? (product.discountPrice ?? product.price);
+  for (const item of validItems) {
+    const price = item.product.price;
 
     orderItems.push({
-      productId: product._id, // already ObjectId
-      title: product.title,
+      productId: item.product._id,
+      title: item.product.title,
       quantity: item.quantity,
       price,
-      attributes: item.attributes || {},
     });
 
     totalAmount += price * item.quantity;
 
-    await Product.findByIdAndUpdate(product._id, {
+    await Product.findByIdAndUpdate(item.product._id, {
       $inc: { stock: -item.quantity },
     });
   }
 
   // Create order
   const order = await Order.create({
-    userId: new mongoose.Types.ObjectId(req.user!.id),
+   userId: new mongoose.Types.ObjectId(req.user!.id),
     orderItems,
     totalAmount,
     shippingAddress,
@@ -103,19 +135,13 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     deliveryTimeSlot,
   });
 
-  // Clear cart
-  cart.items = [];
+  // Remove only ordered items from cart (leave unselected items intact)
+  const orderedIds = new Set(orderItems.map((oi: any) => oi.productId.toString()));
+  cart.items = cart.items.filter((item: ICartItem) => {
+    const pid = item.productId?._id?.toString() ?? (item.productId as any)?.toString();
+    return !orderedIds.has(pid);
+  }) as typeof cart.items;
   await cart.save();
-
-  // Create notification for order placement
-  const orderIdShort = order._id.toString().slice(-8);
-  await createNotification(
-    req.user!.id,
-    'Order Placed',
-    `Your order #${orderIdShort} has been placed successfully.`,
-    'order_status',
-    order._id.toString()
-  );
 
   sendResponse(res, 201, order, 'Order placed successfully');
 });
@@ -130,6 +156,7 @@ export const getMyOrders = asyncHandler(async (req: Request, res: Response) => {
 
   const [orders, total] = await Promise.all([
     Order.find({ userId: req.user?.id })
+      .populate('orderItems.productId', 'title images price')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 }),
@@ -153,14 +180,30 @@ export const getMyOrders = asyncHandler(async (req: Request, res: Response) => {
  * @access  Private
  */
 export const getOrderById = asyncHandler(async (req: Request, res: Response) => {
-  const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.params.id)
+    .populate('userId', 'name email')
+    .populate('orderItems.productId', 'title images price');
 
   if (!order) {
     throw new ApiError('Order not found', 404);
   }
 
-  // Check if user owns this order or is admin
-  if (order.userId.toString() !== req.user?.id && req.user?.role !== 'superadmin') {
+  // Check authorization
+  const isCustomer = order.userId._id.toString() === req.user?.id;
+  const isSuperAdmin = req.user?.role === 'superadmin';
+  
+  // For sellers, check if any product in the order belongs to them
+  let isSeller = false;
+  if (req.user?.role === 'seller') {
+    const productIds = order.orderItems.map((item: any) => item.productId);
+    const sellerProducts = await Product.find({
+      _id: { $in: productIds },
+      sellerId: req.user.id
+    });
+    isSeller = sellerProducts.length > 0;
+  }
+
+  if (!isCustomer && !isSuperAdmin && !isSeller) {
     throw new ApiError('Not authorized to view this order', 403);
   }
 
@@ -175,6 +218,8 @@ export const getOrderById = asyncHandler(async (req: Request, res: Response) => 
 export const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
   const { orderStatus, paymentStatus } = req.body;
 
+  console.log('📝 Update order status request:', { orderId: req.params.id, orderStatus, paymentStatus });
+
   const order = await Order.findById(req.params.id);
 
   if (!order) {
@@ -182,6 +227,7 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
   }
 
   const oldStatus = order.orderStatus;
+  console.log(`🔄 Changing order status from "${oldStatus}" to "${orderStatus}"`);
 
   if (orderStatus) {
     order.orderStatus = orderStatus;
@@ -192,6 +238,7 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
   }
 
   await order.save();
+  console.log('💾 Order saved successfully');
 
   // Create notification for customer when order status changes
   if (orderStatus && orderStatus !== oldStatus) {
@@ -202,10 +249,10 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
       cancelled: 'has been cancelled'
     };
 
-    const notificationType =
+    const notificationType = 
       orderStatus === 'shipped' ? 'order_shipped' :
-        orderStatus === 'delivered' ? 'order_delivered' :
-          'order_status';
+      orderStatus === 'delivered' ? 'order_delivered' :
+      'order_status';
 
     const message = statusMessages[orderStatus] || `status has been updated to ${orderStatus}`;
     const orderIdShort = order._id.toString().slice(-8);
@@ -217,6 +264,18 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
       notificationType,
       order._id.toString()
     );
+
+    console.log('🔔 Notification created for user:', order.userId.toString());
+
+    // Emit real-time socket event
+    console.log('📡 Emitting socket event for order:', order._id.toString());
+    emitOrderStatusUpdate(order._id.toString(), {
+      userId: order.userId.toString(),
+      status: orderStatus,
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      updatedAt: order.updatedAt,
+    });
   }
 
   sendResponse(res, 200, order, 'Order updated successfully');
@@ -326,6 +385,13 @@ export const updateDeliveryTracking = asyncHandler(async (req: Request, res: Res
   }
 
   await order.save();
+
+  // Emit real-time delivery tracking update
+  emitDeliveryTrackingUpdate(order._id.toString(), {
+    currentLocation: order.currentLocation,
+    deliveryPersonnel: order.deliveryPersonnel,
+    updatedAt: order.updatedAt,
+  });
 
   sendResponse(res, 200, order, 'Delivery tracking updated successfully');
 });

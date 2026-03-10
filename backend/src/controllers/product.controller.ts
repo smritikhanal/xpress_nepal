@@ -1,6 +1,24 @@
 import { Request, Response } from 'express';
 import Product from '../models/Product.js';
+import Category from '../models/Category.js';
 import { asyncHandler, sendResponse, getPagination, ApiError } from '../utils/apiHelpers.js';
+
+/**
+ * Helper function to find all child categories recursively
+ */
+async function findAllChildCategories(parentCategoryId: string): Promise<string[]> {
+  const childCategories = await Category.find({ parentCategory: parentCategoryId });
+  const childIds: string[] = [];
+
+  for (const child of childCategories) {
+    childIds.push(child._id.toString());
+    // Recursively find children of this child
+    const grandChildIds = await findAllChildCategories(child._id.toString());
+    childIds.push(...grandChildIds);
+  }
+
+  return childIds;
+}
 
 /**
  * @desc    Get all products with filtering & search
@@ -9,18 +27,29 @@ import { asyncHandler, sendResponse, getPagination, ApiError } from '../utils/ap
  */
 export const getProducts = asyncHandler(async (req: Request, res: Response) => {
   const { page, limit, skip } = getPagination(req.query);
-  const { category, brand, minPrice, maxPrice, search, sort, sellerId } = req.query;
+  const { category, categoryId, brand, minPrice, maxPrice, search, sort, sellerId } = req.query;
 
   // Build filter object
   const filter: Record<string, unknown> = { isActive: true };
 
-  // Filter by seller (for seller dashboard)
+  // Filter by seller (for seller dashboard) - show all products (including inactive)
   if (sellerId) {
     filter.sellerId = sellerId;
+    delete filter.isActive; // Sellers can see their own inactive products too
   }
 
   if (category) {
     filter.categoryId = category;
+  }
+
+  // Also support categoryId query param with hierarchical filtering
+  if (categoryId) {
+    // Find all child categories recursively
+    const categoryIds = await findAllChildCategories(categoryId as string);
+    categoryIds.push(categoryId as string); // Include the parent category itself
+    
+    // Filter by parent category OR any of its children
+    filter.categoryId = { $in: categoryIds };
   }
 
   if (brand) {
@@ -33,9 +62,13 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
     if (maxPrice) (filter.price as Record<string, number>).$lte = Number(maxPrice);
   }
 
-  // Text search
+  // Text search - using regex for better partial matching
   if (search) {
-    filter.$text = { $search: search as string };
+    filter.$or = [
+      { title: { $regex: search as string, $options: 'i' } },
+      { description: { $regex: search as string, $options: 'i' } },
+      { brand: { $regex: search as string, $options: 'i' } },
+    ];
   }
 
   // Sort options

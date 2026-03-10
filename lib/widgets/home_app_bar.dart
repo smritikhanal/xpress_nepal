@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:xpress_nepal/core/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
+import 'package:xpress_nepal/features/notification/presentation/pages/notification_page.dart';
+import 'package:xpress_nepal/features/notification/presentation/providers/notification_provider.dart';
+import 'package:xpress_nepal/features/messages/presentation/pages/messages_page.dart';
+import 'package:xpress_nepal/features/messages/presentation/providers/message_provider.dart';
+import 'package:xpress_nepal/features/home/presentation/pages/wishlist_screen.dart';
+import 'package:xpress_nepal/features/home/presentation/providers/wishlist_provider.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final TextEditingController searchController = TextEditingController();
   final VoidCallback? onLogout;
+  final VoidCallback? onSearchTap;
 
-  HomeAppBar({super.key, this.onLogout});
+  const HomeAppBar({super.key, this.onLogout, this.onSearchTap});
 
   @override
   Widget build(BuildContext context) {
@@ -54,93 +62,168 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
               if (isTablet) ...[
                 const SizedBox(width: 24),
 
-                // Search bar - only on tablet
+                // Search bar - only on tablet (tappable to open search)
                 Expanded(
-                  child: Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.textLight,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: searchController,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: AppColors.textPrimary,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (onSearchTap != null) {
+                        onSearchTap!();
+                      }
+                    },
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.textLight,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      decoration: InputDecoration(
-                        hintText: 'Search products...',
-                        hintStyle: const TextStyle(
-                          color: AppColors.textHint,
-                          fontSize: 14,
-                        ),
-                        filled: true,
-                        fillColor: Colors.transparent,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
-                        prefixIcon: const Padding(
-                          padding: EdgeInsets.only(left: 12, right: 8),
-                          child: Icon(
+                      child: Row(
+                        children: [
+                          const Icon(
                             Icons.search_rounded,
                             size: 22,
                             color: AppColors.textHint,
                           ),
-                        ),
-                        prefixIconConstraints: const BoxConstraints(
-                          minWidth: 46,
-                          minHeight: 44,
-                        ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Search products...',
+                            style: TextStyle(
+                              color: AppColors.textHint,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ] else ...[
-                const Spacer(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: AuthProvider.instance.authViewModel,
+                    builder: (context, _) {
+                      final user =
+                          AuthProvider.instance.authViewModel.state.user;
+                      final firstName = user?.name.split(' ').first ?? 'there';
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [],
+                      );
+                    },
+                  ),
+                ),
               ],
 
               const SizedBox(width: 8),
 
               // Search icon for mobile only
               if (!isTablet)
-                _buildActionButton(
-                  icon: Icons.search_rounded,
-                  onPressed: () {
-                    // TODO: Open search screen or show search dialog
-                  },
-                  isTablet: isTablet,
+                Container(
+                  key: const ValueKey('search_button'),
+                  child: _buildActionButton(
+                    icon: Icons.search_rounded,
+                    onPressed: () {
+                      if (onSearchTap != null) {
+                        onSearchTap!();
+                      }
+                    },
+                    isTablet: isTablet,
+                  ),
                 ),
 
               // Action buttons
-              _buildActionButton(
-                icon: Icons.notifications_rounded,
-                onPressed: () {},
-                isTablet: isTablet,
-                badge: 3,
+              Container(
+                key: const ValueKey('notification_button'),
+                child: ListenableBuilder(
+                  listenable:
+                      NotificationProvider.instance.notificationViewModel,
+                  builder: (context, _) {
+                    final vm =
+                        NotificationProvider.instance.notificationViewModel;
+                    final unreadCount = vm.state.unreadCount;
+
+                    return _buildActionButton(
+                      icon: Icons.notifications_rounded,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationPage(),
+                          ),
+                        );
+                      },
+                      isTablet: isTablet,
+                      badge: unreadCount > 0 ? unreadCount : null,
+                    );
+                  },
+                ),
               ),
-              _buildActionButton(
-                icon: Icons.chat_bubble_rounded,
-                onPressed: () {},
-                isTablet: isTablet,
+              // Messages button with unread count
+              Container(
+                key: const ValueKey('messages_button'),
+                child: ListenableBuilder(
+                  listenable: MessageProvider.instance.viewModel,
+                  builder: (context, _) {
+                    final vm = MessageProvider.instance.viewModel;
+                    final unreadCount = vm.unreadCount;
+
+                    return _buildActionButton(
+                      icon: Icons.chat_bubble_rounded,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MessagesPage(),
+                          ),
+                        );
+                      },
+                      isTablet: isTablet,
+                      badge: unreadCount > 0 ? unreadCount : null,
+                    );
+                  },
+                ),
+              ),
+              // Wishlist button
+              Container(
+                key: const ValueKey('wishlist_button'),
+                child: Consumer<WishlistProvider>(
+                  builder: (context, wishlistProvider, _) {
+                    final count = wishlistProvider.wishlist.length;
+                    return _buildActionButton(
+                      icon: Icons.favorite_rounded,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const WishlistScreen(),
+                          ),
+                        );
+                      },
+                      isTablet: isTablet,
+                      badge: count > 0 ? count : null,
+                      tooltip: 'Wishlist',
+                    );
+                  },
+                ),
               ),
               if (onLogout != null)
-                _buildActionButton(
-                  icon: Icons.logout_rounded,
-                  onPressed: onLogout!,
-                  isTablet: isTablet,
-                  tooltip: 'Logout',
+                Container(
+                  key: const ValueKey('logout_button'),
+                  child: _buildActionButton(
+                    icon: Icons.logout_rounded,
+                    onPressed: onLogout!,
+                    isTablet: isTablet,
+                    tooltip: 'Logout',
+                  ),
                 ),
             ],
           ),

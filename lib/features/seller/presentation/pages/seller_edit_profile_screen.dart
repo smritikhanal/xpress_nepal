@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:xpress_nepal/app/theme/app_colors.dart';
+import 'package:xpress_nepal/core/utils/image_helper.dart';
 import 'package:xpress_nepal/features/auth/presentation/providers/auth_provider.dart';
+import 'package:xpress_nepal/features/product/presentation/providers/product_provider.dart';
+import 'package:xpress_nepal/features/order/presentation/providers/order_provider.dart';
 
 class SellerEditProfileScreen extends StatefulWidget {
   const SellerEditProfileScreen({super.key});
@@ -14,7 +20,10 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _authViewModel = AuthProvider.instance.authViewModel;
+  final _imagePicker = ImagePicker();
   late TabController _tabController;
+
+  File? _selectedImage;
 
   // Personal Info Controllers
   late final TextEditingController _nameController;
@@ -71,10 +80,48 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
         _phoneController.text != (user?.phone ?? '') ||
         _shopNameController.text != (user?.shopName ?? '') ||
         _businessDescriptionController.text !=
-            (user?.businessDescription ?? '');
+            (user?.businessDescription ?? '') ||
+        _selectedImage != null;
 
     if (hasChanges != _hasChanges) {
       setState(() => _hasChanges = hasChanges);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = File(image.path);
+          _hasChanges = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              left: MediaQuery.of(context).size.width * 0.4,
+              right: 8,
+              bottom: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -84,17 +131,59 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement API call to update seller profile
-      await Future.delayed(const Duration(seconds: 1)); // Simulated delay
+      final success = await _authViewModel.updateProfile(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        image: _selectedImage?.path,
+        shopName: _shopNameController.text.trim().isEmpty
+            ? null
+            : _shopNameController.text.trim(),
+        businessDescription: _businessDescriptionController.text.trim().isEmpty
+            ? null
+            : _businessDescriptionController.text.trim(),
+      );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context, true);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Profile updated successfully!'),
+              backgroundColor: AppColors.sellerPrimary,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                left: MediaQuery.of(context).size.width * 0.4,
+                right: 8,
+                bottom: 8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          Navigator.pop(context, true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _authViewModel.errorMessage ?? 'Failed to update profile',
+              ),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                left: MediaQuery.of(context).size.width * 0.4,
+                right: 8,
+                bottom: 8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -102,6 +191,16 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
           SnackBar(
             content: Text('Failed to update profile: $e'),
             backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              left: MediaQuery.of(context).size.width * 0.4,
+              right: 8,
+              bottom: 8,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -126,7 +225,7 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
         backgroundColor: AppColors.sellerPrimaryDark,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Edit Profile'),
+        title: const Text('Settings'),
         actions: [
           if (_hasChanges)
             TextButton(
@@ -189,61 +288,49 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
             ),
             child: Column(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          initials,
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.sellerPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.sellerPrimaryDark,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          size: 18,
                           color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(child: _buildAvatarWidget(initials)),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.sellerPrimaryDark,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Photo upload coming soon!'),
-                      ),
-                    );
-                  },
+                  onPressed: _pickImage,
                   child: const Text(
                     'Change Photo',
                     style: TextStyle(
@@ -348,28 +435,43 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
           Center(
             child: Column(
               children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderLight, width: 2),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Stack(
                     children: [
-                      Icon(
-                        Icons.store_rounded,
-                        size: 48,
-                        color: AppColors.sellerPrimary.withOpacity(0.5),
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _selectedImage != null
+                                ? AppColors.sellerPrimary
+                                : AppColors.borderLight,
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: _buildShopLogoWidget(),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Shop Logo',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textHint,
+                      Positioned(
+                        right: 4,
+                        bottom: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.sellerPrimaryDark,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -377,17 +479,13 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
                 ),
                 const SizedBox(height: 12),
                 TextButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Logo upload coming soon!')),
-                    );
-                  },
+                  onPressed: _pickImage,
                   icon: Icon(
                     Icons.upload_rounded,
                     color: AppColors.sellerPrimary,
                   ),
                   label: Text(
-                    'Upload Logo',
+                    _selectedImage != null ? 'Change Logo' : 'Upload Logo',
                     style: TextStyle(color: AppColors.sellerPrimary),
                   ),
                 ),
@@ -459,26 +557,71 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  icon: Icons.inventory_2_rounded,
-                  label: 'Products',
-                  value: '0',
+                child: ListenableBuilder(
+                  listenable: ProductProvider.instance.productViewModel,
+                  builder: (context, _) {
+                    final sellerId = _authViewModel.state.user?.id;
+                    final count = sellerId == null
+                        ? 0
+                        : ProductProvider
+                              .instance
+                              .productViewModel
+                              .state
+                              .products
+                              .where((p) => p.sellerId == sellerId)
+                              .length;
+                    return _buildStatCard(
+                      icon: Icons.inventory_2_rounded,
+                      label: 'Products',
+                      value: '$count',
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                  icon: Icons.shopping_bag_rounded,
-                  label: 'Orders',
-                  value: '0',
+                child: ListenableBuilder(
+                  listenable: OrderProvider.instance,
+                  builder: (context, _) {
+                    final count =
+                        OrderProvider.instance.state.sellerOrders.length;
+                    return _buildStatCard(
+                      icon: Icons.shopping_bag_rounded,
+                      label: 'Orders',
+                      value: '$count',
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                  icon: Icons.star_rounded,
-                  label: 'Rating',
-                  value: 'N/A',
+                child: ListenableBuilder(
+                  listenable: ProductProvider.instance.productViewModel,
+                  builder: (context, _) {
+                    final sellerId = _authViewModel.state.user?.id;
+                    final products = sellerId == null
+                        ? []
+                        : ProductProvider
+                              .instance
+                              .productViewModel
+                              .state
+                              .products
+                              .where((p) => p.sellerId == sellerId)
+                              .toList();
+                    final hasRatings = products.any((p) => p.ratingCount > 0);
+                    final avg = hasRatings
+                        ? products
+                                  .where((p) => p.ratingCount > 0)
+                                  .map((p) => p.ratingAvg)
+                                  .reduce((a, b) => a + b) /
+                              products.where((p) => p.ratingCount > 0).length
+                        : 0.0;
+                    return _buildStatCard(
+                      icon: Icons.star_rounded,
+                      label: 'Rating',
+                      value: hasRatings ? avg.toStringAsFixed(1) : 'N/A',
+                    );
+                  },
                 ),
               ),
             ],
@@ -534,6 +677,83 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
           ),
         ],
       ),
+    );
+  }
+
+  /// Displays selected local file, existing network image, or initials fallback.
+  Widget _buildAvatarWidget(String initials) {
+    if (_selectedImage != null) {
+      return Image.file(
+        _selectedImage!,
+        fit: BoxFit.cover,
+        width: 100,
+        height: 100,
+      );
+    }
+    final imageUrl = _authViewModel.state.user?.image;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        ImageHelper.fixImageUrl(imageUrl),
+        fit: BoxFit.cover,
+        width: 100,
+        height: 100,
+        errorBuilder: (_, __, ___) => _avatarInitials(initials),
+      );
+    }
+    return _avatarInitials(initials);
+  }
+
+  Widget _avatarInitials(String initials) {
+    return Center(
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.bold,
+          color: AppColors.sellerPrimary,
+        ),
+      ),
+    );
+  }
+
+  /// Displays selected local file, existing network image, or placeholder icon.
+  Widget _buildShopLogoWidget() {
+    if (_selectedImage != null) {
+      return Image.file(
+        _selectedImage!,
+        fit: BoxFit.cover,
+        width: 120,
+        height: 120,
+      );
+    }
+    final imageUrl = _authViewModel.state.user?.image;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        ImageHelper.fixImageUrl(imageUrl),
+        fit: BoxFit.cover,
+        width: 120,
+        height: 120,
+        errorBuilder: (_, __, ___) => _shopLogoPlaceholder(),
+      );
+    }
+    return _shopLogoPlaceholder();
+  }
+
+  Widget _shopLogoPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.store_rounded,
+          size: 48,
+          color: AppColors.sellerPrimary.withOpacity(0.5),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Shop Logo',
+          style: TextStyle(fontSize: 12, color: AppColors.textHint),
+        ),
+      ],
     );
   }
 
@@ -732,7 +952,20 @@ class _SellerEditProfileScreenState extends State<SellerEditProfileScreen>
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deletion coming soon!')),
+                SnackBar(
+                  content: const Text('Account deletion coming soon!'),
+                  backgroundColor: AppColors.sellerPrimary,
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.only(
+                    left: MediaQuery.of(context).size.width * 0.4,
+                    right: 8,
+                    bottom: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
               );
             },
             style: TextButton.styleFrom(

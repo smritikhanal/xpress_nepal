@@ -1,10 +1,8 @@
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:xpress_nepal/features/order/data/datasources/order_remote_datasource.dart';
 import 'package:xpress_nepal/features/order/data/repositories/order_repository_impl.dart';
 import 'package:xpress_nepal/features/order/data/models/order_model.dart';
-import 'package:xpress_nepal/features/order/domain/models/order_entity.dart';
 
 class MockOrderRemoteDataSource extends Mock implements OrderRemoteDataSource {}
 
@@ -41,7 +39,9 @@ void main() {
   group('createOrder', () {
     test('should return created order from remote datasource', () async {
       // Arrange
-      when(() => mockRemoteDataSource.createOrder(any())).thenAnswer((_) async => tOrderModel);
+      when(
+        () => mockRemoteDataSource.createOrder(any()),
+      ).thenAnswer((_) async => tOrderModel);
 
       // Act
       final result = await repository.createOrder(
@@ -58,7 +58,9 @@ void main() {
   group('getMyOrders', () {
     test('should return list of orders', () async {
       // Arrange
-      when(() => mockRemoteDataSource.getMyOrders(any(), any())).thenAnswer((_) async => [tOrderModel]);
+      when(
+        () => mockRemoteDataSource.getMyOrders(any(), any()),
+      ).thenAnswer((_) async => [tOrderModel]);
 
       // Act
       final result = await repository.getMyOrders();
